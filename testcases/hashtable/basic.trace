@@ -1,0 +1,13 @@
+init
+put foo int 42
+get foo int 42
+put bar string "hello"
+get bar string "hello"
+get missing null _
+put foo int 100
+get foo int 100
+size 2
+del foo
+get foo null _
+size 1
+free

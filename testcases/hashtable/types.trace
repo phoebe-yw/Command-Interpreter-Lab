@@ -1,0 +1,21 @@
+init
+put pos_int int 12345
+put neg_int int -9876
+put zero_int int 0
+put large_int int 9223372036854775807
+get pos_int int 12345
+get neg_int int -9876
+get zero_int int 0
+get large_int int 9223372036854775807
+put empty_str string ""
+put special string "hello world"
+put long_str string "abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+get empty_str string ""
+get special string "hello world"
+get long_str string "abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+put bool_true bool true
+put bool_false bool false
+get bool_true bool true
+get bool_false bool false
+size 9
+free

@@ -1,0 +1,26 @@
+init
+put a int 1
+put b int 2
+put c int 3
+size 3
+del b
+size 2
+get a int 1
+get b null _
+get c int 3
+del nonexistent
+size 2
+put b int 200
+get b int 200
+size 3
+del a
+del b
+del c
+size 0
+get a null _
+get b null _
+get c null _
+put reinsert int 42
+get reinsert int 42
+size 1
+free

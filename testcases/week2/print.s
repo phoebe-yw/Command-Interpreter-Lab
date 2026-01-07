@@ -1,0 +1,163 @@
+print x0, B
+print x0, X
+print x0, D
+
+mov x0, 0x123456789abcdef0
+print x0, B
+print x0, X
+print x0, D
+
+mov x1, 9223372036854775123
+print x1, B
+print x1, X
+print x1, D
+
+mov x2, 0b0010101010101010101010101010101010101010101010101010101010101010
+print x2, B
+print x2, X
+print x2, D
+
+mov x3, 0x387654321fedcba9
+print x3, B
+print x3, X
+print x3, D
+
+mov x4, 8675309876543210123
+print x4, B
+print x4, X
+print x4, D
+
+mov x5, 0b0111000011110000111100001111000011110000111100001111000011110000
+print x5, B
+print x5, X
+print x5, D
+
+mov x6, 0x555555555555555
+print x6, B
+print x6, X
+print x6, D
+
+mov x7, 7777777777777777777
+print x7, B
+print x7, X
+print x7, D
+
+mov x8, 0b0101010101010101010101010101010101010101010101010101010101010101
+print x8, B
+print x8, X
+print x8, D
+
+mov x9, 0x2aaaaaaaaaaaaaa
+print x9, B
+print x9, X
+print x9, D
+
+mov x10, 6543210987654321098
+print x10, B
+print x10, X
+print x10, D
+
+mov x11, 0b0100110011001100110011001100110011001100110011001100110011001100
+print x11, B
+print x11, X
+print x11, D
+
+mov x12, 0x3edcba9876543210
+print x12, B
+print x12, X
+print x12, D
+
+mov x13, 5432109876543210987
+print x13, B
+print x13, X
+print x13, D
+
+mov x14, 0b0010101010101010101010101010101010101010101010101010101010101010
+print x14, B
+print x14, X
+print x14, D
+
+mov x15, 0x123456789abcdee0
+print x15, B
+print x15, X
+print x15, D
+
+mov x16, 4321098765432109876
+print x16, B
+print x16, X
+print x16, D
+
+mov x17, 0b0111111100000000111111110000000011111111000000001111111100000000
+print x17, B
+print x17, X
+print x17, D
+
+mov x18, 0x399999999999999
+print x18, B
+print x18, X
+print x18, D
+
+mov x19, 3210987654321098765
+print x19, B
+print x19, X
+print x19, D
+
+mov x20, 0b0010101010101010101010101010101010101010101010101010101010101010
+print x20, B
+print x20, X
+print x20, D
+
+mov x21, 0x377777777777777
+print x21, B
+print x21, X
+print x21, D
+
+mov x22, 2109876543210987654
+print x22, B
+print x22, X
+print x22, D
+
+mov x23, 0b0111000011110000111100001111000011110000111100001111000011110000
+print x23, B
+print x23, X
+print x23, D
+
+mov x24, 0x155555555555555
+print x24, B
+print x24, X
+print x24, D
+
+mov x25, 1098765432109876543
+print x25, B
+print x25, X
+print x25, D
+
+mov x26, 0b0100110011001100110011001100110011001100110011001100110011001100
+print x26, B
+print x26, X
+print x26, D
+
+mov x27, 0x333333333333333
+print x27, B
+print x27, X
+print x27, D
+
+mov x28, 8223372036854775807
+print x28, B
+print x28, X
+print x28, D
+
+mov x29, 0b0010101010101010101010101010101010101010101010101010101010101010
+print x29, B
+print x29, X
+print x29, D
+
+mov x30, 0x111111111111111
+print x30, B
+print x30, X
+print x30, D
+
+mov x31, 8123372036854775807
+print x31, B
+print x31, X
+print x31, D

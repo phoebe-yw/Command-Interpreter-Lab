@@ -1,0 +1,20 @@
+init
+put x int 1
+get x int 1
+put x int 2
+get x int 2
+put x int 3
+get x int 3
+put x string "now a string"
+get x string "now a string"
+put x bool true
+get x bool true
+put x int 999
+get x int 999
+size 1
+put y string "first"
+put y string "second"
+put y string "third"
+get y string "third"
+size 2
+free
