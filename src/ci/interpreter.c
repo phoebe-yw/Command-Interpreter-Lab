@@ -35,12 +35,26 @@ void interpret(Interpreter* intr, Command* commands) {
         switch (current->type) {
             case CMD_NOP:
                 break;
+            case CMD_MOV: {
+                // first check if it is an OP_IMM, then set to val
+                if (current->val_a.type != OP_IMM) {
+                    intr->had_error = true;
+                    return;
+                }
+                int64_t val = current->val_a.as.imm;
+                intr->variables[current->destination.as.var] = val;
+                break;
+            }
             case CMD_ADD:
+                break;
             case CMD_SUB:
-            case CMD_MOV:
+                break;
             case CMD_CMP:
+                break;
             case CMD_CMP_U:
+                break;
             case CMD_PRINT:
+                break;
             default:
                 return;
         }

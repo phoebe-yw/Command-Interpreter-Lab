@@ -11,8 +11,8 @@
 static bool parse_number(Token token, int64_t* result);
 static Command* parse_cmd(Parser* parser);
 
-void parser_init(Parser* parser,
-                 Lexer* lexer) {  // we have the parser reading from the lexer
+// we have the parser reading from the lexer
+void parser_init(Parser* parser, Lexer* lexer) {
     if (!parser) {
         return;
     }
@@ -34,10 +34,45 @@ void parser_init(Parser* parser,
 static bool parse_number(Token token, int64_t* result) {
     const char* parse_start = token.lexeme;
 
+    int base = 0;
+
+    // modified: deal with binary prefix 0b
+    if (token.length > 2 && token.lexeme[0] == '0' && token.lexeme[1] == 'b') {
+        base = 2;
+        parse_start += 2;
+    }
+
     char* endptr;
-    *result = strtoll(parse_start, &endptr, 0);
+    *result = strtoll(parse_start, &endptr, base);
 
     return (token.lexeme + token.length) == endptr;
+}
+
+// helper function to parse identifier tokens in the form of x<number>
+static bool parse_ident(Token token, int64_t* result) {
+    // pass in Token, and variable int64_t we need to modify the mem address of
+    if (token.type != TOK_IDENT) {
+        return false;
+    }
+
+    if (token.lexeme[0] != 'x' || token.length <= 1) {
+        return false;
+    }
+
+    int64_t val;
+    Token after_x;
+    after_x.type = TOK_IDENT;
+    after_x.length = token.length - 1;
+    after_x.lexeme = token.lexeme + 1;
+
+    if (!parse_number(after_x, &val)) {
+        return false;
+    }
+    if (val < 0 || val > 31) {
+        return false;
+    }
+    *result = val;
+    return true;
 }
 
 /**
@@ -78,23 +113,71 @@ static Command* parse_cmd(Parser* parser) {
             cmd->type = CMD_NOP;
             cmd->next = NULL;
 
-            parser->current = parser->next;                  // becomes NL
-            parser->next = lexer_next_token(parser->lexer);  // becomes nop
+            parser->current = parser->next;
+            parser->next = lexer_next_token(parser->lexer);
 
-            // if (parser->current.type == TOK_NL) {
-            //     parser->current = parser->next;
-            //     parser->next = lexer_next_token(parser->lexer);
-            // } else if (parser->current.type != TOK_EOF) {
-            //     parser->had_error = true;  // free after
-            //     free(cmd);
-            //     return NULL;
-            // }
+            // if the type is not new line AND is not EOF, we have problem
             if (parser->current.type != TOK_NL &&
                 parser->current.type != TOK_EOF) {
                 parser->had_error = true;  // free after
                 free(cmd);
                 return NULL;
             }
+            return cmd;
+        case TOK_MOV:  // assign a value
+            cmd->type = CMD_MOV;
+            cmd->next = NULL;
+
+            parser->current = parser->next;                  // should be ident
+            parser->next = lexer_next_token(parser->lexer);  // should be comma
+
+            if (parser->current.type != TOK_IDENT) {  // expected ident
+                parser->had_error = true;
+                free(cmd);
+                return NULL;
+            }
+            cmd->destination.type = OP_VAR;
+            int64_t var_index;
+            if (!parse_ident(parser->current, &var_index)) {
+                parser->had_error = true;
+                free(cmd);
+                return NULL;
+            }
+            cmd->destination.as.var = var_index;
+
+            parser->current = parser->next;                  // should be comma
+            parser->next = lexer_next_token(parser->lexer);  // should be num
+
+            if (parser->current.type != TOK_COMMA) {
+                parser->had_error = true;
+                free(cmd);
+                return NULL;
+            }
+
+            parser->current = parser->next;                  // should be num
+            parser->next = lexer_next_token(parser->lexer);  // should be eof
+            if (parser->current.type != TOK_NUM) {
+                parser->had_error = true;
+                free(cmd);
+                return NULL;
+            }
+
+            cmd->val_a.type = OP_IMM;  // value is an immediate number
+            if (!parse_number(parser->current, &cmd->val_a.as.imm)) {
+                parser->had_error = true;
+                free(cmd);
+                return NULL;
+            }
+
+            parser->current = parser->next;                  // should be num
+            parser->next = lexer_next_token(parser->lexer);  // should be NL
+            if (parser->current.type != TOK_NL &&
+                parser->current.type != TOK_EOF) {
+                parser->had_error = true;
+                free(cmd);
+                return NULL;
+            }
+
             return cmd;
         default:
             // unrecognized command
