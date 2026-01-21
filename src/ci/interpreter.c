@@ -21,6 +21,31 @@ void interpreter_init(Interpreter* intr) {
     intr->is_equal = false;
 }
 
+// helper to print out base 2
+void print_binary(int64_t value) {
+    if (value == 0) {
+        putchar('0');
+        return;
+    }
+
+    char binary[65];  // max 64 bits plus eof bit
+    int index = 0;
+
+    while (value > 0) {
+        if (value % 2 == 0) {
+            binary[index++] = '0';
+        } else {
+            binary[index++] = '1';
+        }
+        value /= 2;
+    }
+
+    // print bits in reverse order
+    for (int i = index - 1; i >= 0; i--) {
+        putchar(binary[i]);
+    }
+}
+
 void interpret(Interpreter* intr, Command* commands) {
     if (!intr || !commands) {
         return;
@@ -53,8 +78,32 @@ void interpret(Interpreter* intr, Command* commands) {
                 break;
             case CMD_CMP_U:
                 break;
-            case CMD_PRINT:
+            case CMD_PRINT: {
+                if (current->val_a.type != OP_VAR &&
+                    current->val_a.type != OP_IMM) {
+                    intr->had_error = true;
+                    return;
+                }
+                int64_t value;
+                if (current->val_a.type == OP_VAR) {
+                    value = intr->variables[current->val_a.as.var];
+                } else if (current->val_a.type == OP_IMM) {
+                    value = current->val_a.as.imm;
+                }
+
+                // now print the correct base B X D
+                char base_type = current->val_b.as.base;
+                if (base_type == 'D') {  // print decimal
+                    printf("%ld\n", value);
+                } else if (base_type == 'X') {  // print hex
+                    printf("0x%lx\n", (unsigned long)value);
+                } else if (base_type == 'B') {  // print binary
+                    printf("0b");
+                    print_binary(value);
+                    printf("\n");
+                }
                 break;
+            }
             default:
                 return;
         }

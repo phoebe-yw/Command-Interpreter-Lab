@@ -108,10 +108,10 @@ static Command* parse_cmd(Parser* parser) {
     //
     // Token types correspond to commands, e.g., TOK_NOP -> CMD_NOP.
     Command* cmd = malloc(sizeof(Command));
+    cmd->next = NULL;
     switch (token.type) {
-        case TOK_NOP:
+        case TOK_NOP: {
             cmd->type = CMD_NOP;
-            cmd->next = NULL;
 
             parser->current = parser->next;
             parser->next = lexer_next_token(parser->lexer);
@@ -124,9 +124,9 @@ static Command* parse_cmd(Parser* parser) {
                 return NULL;
             }
             return cmd;
-        case TOK_MOV:  // assign a value
+        }
+        case TOK_MOV: {  // assign a value
             cmd->type = CMD_MOV;
-            cmd->next = NULL;
 
             parser->current = parser->next;                  // should be ident
             parser->next = lexer_next_token(parser->lexer);  // should be comma
@@ -177,8 +177,78 @@ static Command* parse_cmd(Parser* parser) {
                 free(cmd);
                 return NULL;
             }
+            return cmd;
+        }
+        case TOK_PRINT: {
+            cmd->type = CMD_PRINT;
+
+            parser->current = parser->next;  // should be ident or num
+            parser->next = lexer_next_token(parser->lexer);  // should be comma
+
+            if (parser->current.type == TOK_IDENT) {
+                int64_t var_index;
+                if (!parse_ident(parser->current, &var_index)) {
+                    parser->had_error = true;
+                    free(cmd);
+                    return NULL;
+                }
+                cmd->val_a.type = OP_VAR;
+                cmd->val_a.as.var = var_index;
+            } else if (parser->current.type == TOK_NUM) {
+                int64_t val;
+                if (!parse_ident(parser->current, &val)) {
+                    parser->had_error = true;
+                    free(cmd);
+                    return NULL;
+                }
+                cmd->val_a.type = OP_IMM;
+                cmd->val_a.as.imm = val;
+            } else {
+                parser->had_error = true;
+                free(cmd);
+                return NULL;
+            }
+
+            parser->current = parser->next;                  // should be comma
+            parser->next = lexer_next_token(parser->lexer);  // should be base
+
+            if (parser->current.type != TOK_COMMA) {
+                parser->had_error = true;
+                free(cmd);
+                return NULL;
+            }
+
+            parser->current = parser->next;  // should be base
+            parser->next = lexer_next_token(parser->lexer);
+
+            if (parser->current.type != TOK_IDENT ||
+                parser->current.length != 1) {
+                parser->had_error = true;
+                free(cmd);
+                return NULL;
+            }
+
+            char base_type = parser->current.lexeme[0];
+            if (base_type != 'B' && base_type != 'X' && base_type != 'D') {
+                parser->had_error = true;
+                free(cmd);
+                return NULL;
+            }
+            cmd->val_b.type = OP_BASE;
+            cmd->val_b.as.base = base_type;
+
+            parser->current = parser->next;  // NL / EOF
+            parser->next = lexer_next_token(parser->lexer);
+
+            if (parser->current.type != TOK_NL &&
+                parser->current.type != TOK_EOF) {
+                parser->had_error = true;
+                free(cmd);
+                return NULL;
+            }
 
             return cmd;
+        }
         default:
             // unrecognized command
             parser->had_error = true;
