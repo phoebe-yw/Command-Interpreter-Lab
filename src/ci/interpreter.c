@@ -22,7 +22,7 @@ void interpreter_init(Interpreter* intr) {
 }
 
 // helper to print out base 2
-void print_binary(int64_t value) {
+void print_binary(uint64_t value) {
     if (value == 0) {
         putchar('0');
         return;
@@ -71,13 +71,48 @@ void interpret(Interpreter* intr, Command* commands) {
                 break;
             }
             case CMD_ADD:
+                if (current->destination.type != OP_VAR ||
+                    current->val_a.type != OP_VAR ||
+                    (current->val_b.type != OP_VAR &&
+                     current->val_b.type != OP_IMM)) {
+                    intr->had_error = true;
+                    return;
+                }
+                int64_t sum;
+                if (current->val_b.type == OP_VAR) {
+                    sum = intr->variables[current->val_a.as.var] +
+                          intr->variables[current->val_b.as.var];
+                } else {
+                    sum = intr->variables[current->val_a.as.var] +
+                          current->val_b.as.imm;
+                }
+                intr->variables[current->destination.as.var] = sum;
                 break;
-            case CMD_SUB:
+            case CMD_SUB: {
+                if (current->destination.type != OP_VAR ||
+                    current->val_a.type != OP_VAR ||
+                    (current->val_b.type != OP_VAR &&
+                     current->val_b.type != OP_IMM)) {
+                    intr->had_error = true;
+                    return;
+                }
+                int64_t diff;
+                if (current->val_b.type == OP_VAR) {
+                    diff = intr->variables[current->val_a.as.var] -
+                           intr->variables[current->val_b.as.var];
+                } else {
+                    diff = intr->variables[current->val_a.as.var] -
+                           current->val_b.as.imm;
+                }
+                intr->variables[current->destination.as.var] = diff;
                 break;
-            case CMD_CMP:
+            }
+            case CMD_CMP: {
                 break;
-            case CMD_CMP_U:
+            }
+            case CMD_CMP_U: {
                 break;
+            }
             case CMD_PRINT: {
                 if (current->val_a.type != OP_VAR &&
                     current->val_a.type != OP_IMM) {

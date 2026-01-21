@@ -75,6 +75,13 @@ static bool parse_ident(Token token, int64_t* result) {
     return true;
 }
 
+// void throw_error(Parser p, Command cmd) { // TODO write throw error helper
+// method
+//     p->had_error = true;
+//     free(cmd);
+//     return NULL;
+// }
+
 /**
  * @brief Parses a singular command.
  *
@@ -127,6 +134,7 @@ static Command* parse_cmd(Parser* parser) {
         }
         case TOK_MOV: {  // assign a value
             cmd->type = CMD_MOV;
+            // cmd->val_b.type = OP_NONE;
 
             parser->current = parser->next;                  // should be ident
             parser->next = lexer_next_token(parser->lexer);  // should be comma
@@ -247,6 +255,214 @@ static Command* parse_cmd(Parser* parser) {
                 return NULL;
             }
 
+            return cmd;
+        }
+        case TOK_ADD: {
+            cmd->type = CMD_ADD;
+
+            parser->current = parser->next;                  // tok ident
+            parser->next = lexer_next_token(parser->lexer);  // tok comma
+
+            if (parser->current.type != TOK_IDENT) {
+                parser->had_error = true;
+                free(cmd);
+                return NULL;
+            }
+
+            // set the destination for command
+            cmd->destination.type = OP_VAR;
+            int64_t var_index;
+            if (!parse_ident(parser->current, &var_index)) {
+                parser->had_error = true;
+                free(cmd);
+                return NULL;
+            }
+            cmd->destination.as.var = var_index;
+
+            parser->current = parser->next;                  // tok comma
+            parser->next = lexer_next_token(parser->lexer);  // tok ident
+
+            if (parser->current.type != TOK_COMMA) {
+                parser->had_error = true;
+                free(cmd);
+                return NULL;
+            }
+
+            parser->current = parser->next;                  // tok ident
+            parser->next = lexer_next_token(parser->lexer);  // tok comma
+
+            if (parser->current.type != TOK_IDENT) {
+                parser->had_error = true;
+                free(cmd);
+                return NULL;
+            }
+
+            // set val_a in command
+            cmd->val_a.type = OP_VAR;
+            int64_t val_a_index;
+            if (!parse_ident(parser->current, &val_a_index)) {
+                parser->had_error = true;
+                free(cmd);
+                return NULL;
+            }
+            cmd->val_a.as.var = val_a_index;
+
+            parser->current = parser->next;                  // tok comma
+            parser->next = lexer_next_token(parser->lexer);  // tok ident/num
+
+            if (parser->current.type != TOK_COMMA) {
+                parser->had_error = true;
+                free(cmd);
+                return NULL;
+            }
+
+            parser->current = parser->next;                  // tok ident/num
+            parser->next = lexer_next_token(parser->lexer);  // tok eof
+
+            // check if it is ident/num
+            if (parser->current.type != TOK_IDENT &&
+                parser->current.type != TOK_NUM) {
+                parser->had_error = true;
+                free(cmd);
+                return NULL;
+            }
+
+            int64_t val_b_index;
+            if (parser->current.type == TOK_IDENT) {
+                cmd->val_b.type = OP_VAR;
+                if (!parse_ident(parser->current, &val_b_index)) {
+                    parser->had_error = true;
+                    free(cmd);
+                    return NULL;
+                }
+                cmd->val_b.as.var = val_b_index;
+            } else if (parser->current.type == TOK_NUM) {
+                cmd->val_b.type = OP_IMM;
+                if (!parse_number(parser->current, &val_b_index)) {
+                    parser->had_error = true;
+                    free(cmd);
+                    return NULL;
+                }
+                cmd->val_b.as.imm = val_b_index;
+            } else {
+                parser->had_error = true;
+                free(cmd);
+                return NULL;
+            }
+
+            parser->current = parser->next;  // tok eof/nl
+            parser->next = lexer_next_token(parser->lexer);
+
+            if (parser->current.type != TOK_NL &&
+                parser->current.type != TOK_EOF) {
+                parser->had_error = true;
+                free(cmd);
+                return NULL;
+            }
+            return cmd;
+        }
+        case TOK_SUB: {  // exact same as add
+            cmd->type = CMD_SUB;
+
+            parser->current = parser->next;                  // tok ident
+            parser->next = lexer_next_token(parser->lexer);  // tok comma
+
+            if (parser->current.type != TOK_IDENT) {
+                parser->had_error = true;
+                free(cmd);
+                return NULL;
+            }
+
+            // set the destination for command
+            cmd->destination.type = OP_VAR;
+            int64_t var_index;
+            if (!parse_ident(parser->current, &var_index)) {
+                parser->had_error = true;
+                free(cmd);
+                return NULL;
+            }
+            cmd->destination.as.var = var_index;
+
+            parser->current = parser->next;                  // tok comma
+            parser->next = lexer_next_token(parser->lexer);  // tok ident
+
+            if (parser->current.type != TOK_COMMA) {
+                parser->had_error = true;
+                free(cmd);
+                return NULL;
+            }
+
+            parser->current = parser->next;                  // tok ident
+            parser->next = lexer_next_token(parser->lexer);  // tok comma
+
+            if (parser->current.type != TOK_IDENT) {
+                parser->had_error = true;
+                free(cmd);
+                return NULL;
+            }
+
+            // set val_a in command
+            cmd->val_a.type = OP_VAR;
+            int64_t val_a_index;
+            if (!parse_ident(parser->current, &val_a_index)) {
+                parser->had_error = true;
+                free(cmd);
+                return NULL;
+            }
+            cmd->val_a.as.var = val_a_index;
+
+            parser->current = parser->next;                  // tok comma
+            parser->next = lexer_next_token(parser->lexer);  // tok ident/num
+
+            if (parser->current.type != TOK_COMMA) {
+                parser->had_error = true;
+                free(cmd);
+                return NULL;
+            }
+
+            parser->current = parser->next;                  // tok ident/num
+            parser->next = lexer_next_token(parser->lexer);  // tok eof
+
+            // check if it is ident/num
+            if (parser->current.type != TOK_IDENT &&
+                parser->current.type != TOK_NUM) {
+                parser->had_error = true;
+                free(cmd);
+                return NULL;
+            }
+
+            int64_t val_b_index;
+            if (parser->current.type == TOK_IDENT) {
+                cmd->val_b.type = OP_VAR;
+                if (!parse_ident(parser->current, &val_b_index)) {
+                    parser->had_error = true;
+                    free(cmd);
+                    return NULL;
+                }
+                cmd->val_b.as.var = val_b_index;
+            } else if (parser->current.type == TOK_NUM) {
+                cmd->val_b.type = OP_IMM;
+                if (!parse_number(parser->current, &val_b_index)) {
+                    parser->had_error = true;
+                    free(cmd);
+                    return NULL;
+                }
+                cmd->val_b.as.imm = val_b_index;
+            } else {
+                parser->had_error = true;
+                free(cmd);
+                return NULL;
+            }
+
+            parser->current = parser->next;  // tok eof/nl
+            parser->next = lexer_next_token(parser->lexer);
+
+            if (parser->current.type != TOK_NL &&
+                parser->current.type != TOK_EOF) {
+                parser->had_error = true;
+                free(cmd);
+                return NULL;
+            }
             return cmd;
         }
         default:
