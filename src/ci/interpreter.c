@@ -108,9 +108,60 @@ void interpret(Interpreter* intr, Command* commands) {
                 break;
             }
             case CMD_CMP: {
+                if (current->val_a.type != OP_VAR ||
+                    (current->val_b.type != OP_VAR &&
+                     current->val_b.type != OP_IMM)) {
+                    intr->had_error = true;
+                    return;
+                }
+                intr->is_greater = false;
+                intr->is_less = false;
+                intr->is_equal = false;
+                int64_t left = intr->variables[current->val_a.as.var];
+                int64_t right;
+
+                if (current->val_b.type == OP_VAR) {
+                    right = intr->variables[current->val_b.as.var];
+                } else if (current->val_b.type == OP_IMM) {
+                    right = current->val_b.as.imm;
+                }
+
+                if (left > right) {
+                    intr->is_greater = true;
+                } else if (left < right) {
+                    intr->is_less = true;
+                } else {
+                    intr->is_equal = true;
+                }
                 break;
             }
             case CMD_CMP_U: {
+                if (current->val_a.type != OP_VAR ||
+                    (current->val_b.type != OP_VAR &&
+                     current->val_b.type != OP_IMM)) {
+                    intr->had_error = true;
+                    return;
+                }
+                intr->is_greater = false;
+                intr->is_less = false;
+                intr->is_equal = false;
+                uint64_t left =
+                    (uint64_t)intr->variables[current->val_a.as.var];
+                uint64_t right;
+
+                if (current->val_b.type == OP_VAR) {
+                    right = (uint64_t)intr->variables[current->val_b.as.var];
+                } else if (current->val_b.type == OP_IMM) {
+                    right = (uint64_t)current->val_b.as.imm;
+                }
+
+                if (left > right) {
+                    intr->is_greater = true;
+                } else if (left < right) {
+                    intr->is_less = true;
+                } else {
+                    intr->is_equal = true;
+                }
                 break;
             }
             case CMD_PRINT: {
