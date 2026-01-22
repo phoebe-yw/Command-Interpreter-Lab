@@ -119,7 +119,11 @@ static Command* parse_cmd(Parser* parser) {
     // See `include/ci/token_type.h` for token types.
     //
     // Token types correspond to commands, e.g., TOK_NOP -> CMD_NOP.
-    Command* cmd = malloc(sizeof(Command));
+    Command* cmd = calloc(1, sizeof(Command));
+    if (!cmd) {
+        parser->had_error = true;
+        return NULL;
+    }
     cmd->next = NULL;
     switch (token.type) {
         case TOK_NOP: {
@@ -209,7 +213,7 @@ static Command* parse_cmd(Parser* parser) {
                 cmd->val_a.as.var = var_index;
             } else if (parser->current.type == TOK_NUM) {
                 int64_t val;
-                if (!parse_ident(parser->current, &val)) {
+                if (!parse_number(parser->current, &val)) {
                     parser->had_error = true;
                     free(cmd);
                     return NULL;
@@ -645,6 +649,11 @@ Command* parse_commands(Parser* parser) {
         }
         Command* new_cmd = parse_cmd(parser);
         if (!new_cmd) {
+            // free_command(new_cmd);
+            // if (parser->had_error) {
+            //     free_command(head);
+            //     return NULL;
+            // }
             break;
         }
         if (head == NULL) {

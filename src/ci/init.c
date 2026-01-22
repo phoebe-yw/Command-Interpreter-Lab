@@ -23,7 +23,7 @@ int ci_run_source(const char* src, bool print_lex, bool print_parse) {
     Parser p;
     parser_init(&p, &l);
     Command* commands = parse_commands(&p);
-    Command* head = commands;
+    Command* head = commands;  // added
     if (print_parse) {
         print_commands(commands);
     }
@@ -34,7 +34,7 @@ int ci_run_source(const char* src, bool print_lex, bool print_parse) {
         print_token(p.current);
         printf("\nParsed commands up to this point:\n");
         print_commands(commands);
-        free_command(head);
+        free_command(head);  //  added
         return -1;
     }
 
@@ -43,6 +43,8 @@ int ci_run_source(const char* src, bool print_lex, bool print_parse) {
     interpret(&i, commands);
     print_interpreter_state(&i);
     mem_print();
+
+    // free_command(commands);
 
     return (i.had_error) ? -1 : 0;
 }

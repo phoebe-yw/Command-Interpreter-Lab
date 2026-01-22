@@ -64,6 +64,7 @@ void interpret(Interpreter* intr, Command* commands) {
                 // first check if it is an OP_IMM, then set to val
                 if (current->val_a.type != OP_IMM) {
                     intr->had_error = true;
+                    // free_command(commands);
                     return;
                 }
                 int64_t val = current->val_a.as.imm;
@@ -76,6 +77,7 @@ void interpret(Interpreter* intr, Command* commands) {
                     (current->val_b.type != OP_VAR &&
                      current->val_b.type != OP_IMM)) {
                     intr->had_error = true;
+                    // free_command(commands);
                     return;
                 }
                 int64_t sum;
@@ -94,6 +96,7 @@ void interpret(Interpreter* intr, Command* commands) {
                     (current->val_b.type != OP_VAR &&
                      current->val_b.type != OP_IMM)) {
                     intr->had_error = true;
+                    // free_command(commands);
                     return;
                 }
                 int64_t diff;
@@ -112,6 +115,7 @@ void interpret(Interpreter* intr, Command* commands) {
                     (current->val_b.type != OP_VAR &&
                      current->val_b.type != OP_IMM)) {
                     intr->had_error = true;
+                    // free_command(commands);
                     return;
                 }
                 intr->is_greater = false;
@@ -140,6 +144,7 @@ void interpret(Interpreter* intr, Command* commands) {
                     (current->val_b.type != OP_VAR &&
                      current->val_b.type != OP_IMM)) {
                     intr->had_error = true;
+                    // free_command(commands);
                     return;
                 }
                 intr->is_greater = false;
@@ -168,6 +173,7 @@ void interpret(Interpreter* intr, Command* commands) {
                 if (current->val_a.type != OP_VAR &&
                     current->val_a.type != OP_IMM) {
                     intr->had_error = true;
+                    // free_command(commands);
                     return;
                 }
                 int64_t value;
@@ -194,7 +200,8 @@ void interpret(Interpreter* intr, Command* commands) {
                 return;
         }
         current = current->next;
-    }
+        }
+    free_command(commands);
 }
 
 void print_interpreter_state(Interpreter* intr) {
