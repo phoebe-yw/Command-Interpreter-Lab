@@ -21,28 +21,21 @@ void interpreter_init(Interpreter* intr) {
     intr->is_equal = false;
 }
 
-// helper to print out base 2
+// helper to print out base 2 (recursive)
 void print_binary(uint64_t value) {
-    if (value == 0) {
-        putchar('0');
+    if (value < 2) {
+        if (value == 1) {
+            putchar('1');
+        } else {
+            putchar('0');
+        }
         return;
     }
-
-    char binary[65];  // max 64 bits plus eof bit
-    int index = 0;
-
-    while (value > 0) {
-        if (value % 2 == 0) {
-            binary[index++] = '0';
-        } else {
-            binary[index++] = '1';
-        }
-        value /= 2;
-    }
-
-    // print bits in reverse order
-    for (int i = index - 1; i >= 0; i--) {
-        putchar(binary[i]);
+    print_binary(value / 2);
+    if (value % 2 == 1) {
+        putchar('1');
+    } else {
+        putchar('0');
     }
 }
 
@@ -64,7 +57,6 @@ void interpret(Interpreter* intr, Command* commands) {
                 // first check if it is an OP_IMM, then set to val
                 if (current->val_a.type != OP_IMM) {
                     intr->had_error = true;
-                    // free_command(commands);
                     return;
                 }
                 int64_t val = current->val_a.as.imm;
@@ -77,7 +69,6 @@ void interpret(Interpreter* intr, Command* commands) {
                     (current->val_b.type != OP_VAR &&
                      current->val_b.type != OP_IMM)) {
                     intr->had_error = true;
-                    // free_command(commands);
                     return;
                 }
                 int64_t sum;
@@ -96,7 +87,6 @@ void interpret(Interpreter* intr, Command* commands) {
                     (current->val_b.type != OP_VAR &&
                      current->val_b.type != OP_IMM)) {
                     intr->had_error = true;
-                    // free_command(commands);
                     return;
                 }
                 int64_t diff;
@@ -115,7 +105,6 @@ void interpret(Interpreter* intr, Command* commands) {
                     (current->val_b.type != OP_VAR &&
                      current->val_b.type != OP_IMM)) {
                     intr->had_error = true;
-                    // free_command(commands);
                     return;
                 }
                 intr->is_greater = false;
@@ -144,7 +133,6 @@ void interpret(Interpreter* intr, Command* commands) {
                     (current->val_b.type != OP_VAR &&
                      current->val_b.type != OP_IMM)) {
                     intr->had_error = true;
-                    // free_command(commands);
                     return;
                 }
                 intr->is_greater = false;
@@ -173,7 +161,6 @@ void interpret(Interpreter* intr, Command* commands) {
                 if (current->val_a.type != OP_VAR &&
                     current->val_a.type != OP_IMM) {
                     intr->had_error = true;
-                    // free_command(commands);
                     return;
                 }
                 int64_t value;
@@ -200,8 +187,8 @@ void interpret(Interpreter* intr, Command* commands) {
                 return;
         }
         current = current->next;
-        }
-    free_command(commands);
+    }
+    free_command(commands);  // successful commands freed
 }
 
 void print_interpreter_state(Interpreter* intr) {

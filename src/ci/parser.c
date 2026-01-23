@@ -80,13 +80,6 @@ static bool parse_ident(Token token, int64_t* result) {
     return true;
 }
 
-// void throw_error(Parser p, Command cmd) { // TODO write throw error helper
-// method
-//     p->had_error = true;
-//     free(cmd);
-//     return NULL;
-// }
-
 /**
  * @brief Parses a singular command.
  *
@@ -124,7 +117,6 @@ static Command* parse_cmd(Parser* parser) {
         parser->had_error = true;
         return NULL;
     }
-    cmd->next = NULL;
     switch (token.type) {
         case TOK_NOP: {
             cmd->type = CMD_NOP;
@@ -143,7 +135,6 @@ static Command* parse_cmd(Parser* parser) {
         }
         case TOK_MOV: {  // assign a value
             cmd->type = CMD_MOV;
-            // cmd->val_b.type = OP_NONE;
 
             parser->current = parser->next;                  // should be ident
             parser->next = lexer_next_token(parser->lexer);  // should be comma
@@ -649,11 +640,6 @@ Command* parse_commands(Parser* parser) {
         }
         Command* new_cmd = parse_cmd(parser);
         if (!new_cmd) {
-            // free_command(new_cmd);
-            // if (parser->had_error) {
-            //     free_command(head);
-            //     return NULL;
-            // }
             break;
         }
         if (head == NULL) {
