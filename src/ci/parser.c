@@ -16,7 +16,6 @@ void parser_init(Parser* parser, Lexer* lexer) {
     if (!parser) {
         return;
     }
-
     parser->lexer = lexer;  // set the lexer
     parser->had_error = false;
     parser->current = lexer_next_token(parser->lexer);  // first token
@@ -33,18 +32,14 @@ void parser_init(Parser* parser, Lexer* lexer) {
  */
 static bool parse_number(Token token, int64_t* result) {
     const char* parse_start = token.lexeme;
-
     int base = 0;
-
     // modified: deal with binary prefix 0b
     if (token.length > 2 && token.lexeme[0] == '0' && token.lexeme[1] == 'b') {
         base = 2;
         parse_start += 2;
     }
-
     char* endptr;
     *result = strtoll(parse_start, &endptr, base);
-
     return (token.lexeme + token.length) == endptr;
 }
 
@@ -54,22 +49,18 @@ static bool parse_ident(Token token, int64_t* result) {
     if (token.type != TOK_IDENT) {
         return false;
     }
-
     if (token.lexeme[0] != 'x' || token.length <= 1) {
         return false;
     }
-
     // reject leading zeros
     if (token.length > 2 && token.lexeme[1] == '0') {
         return false;
     }
-
     int64_t val;
     Token after_x;
     after_x.type = TOK_IDENT;
     after_x.length = token.length - 1;
     after_x.lexeme = token.lexeme + 1;
-
     if (!parse_number(after_x, &val)) {
         return false;
     }
@@ -80,6 +71,18 @@ static bool parse_ident(Token token, int64_t* result) {
     return true;
 }
 
+// advance helper method to move on to next token
+static void advance(Parser* parser) {
+    parser->current = parser->next;
+    parser->next = lexer_next_token(parser->lexer);
+}
+
+// helper method to set had error to true and free command on error
+static Command* fail_cmd(Parser* parser, Command* cmd) {
+    parser->had_error = true;  // free after
+    free(cmd);
+    return NULL;
+}
 /**
  * @brief Parses a singular command.
  *
@@ -118,505 +121,312 @@ static Command* parse_cmd(Parser* parser) {
         return NULL;
     }
     switch (token.type) {
+        // week 2 start
         case TOK_NOP: {
             cmd->type = CMD_NOP;
-
-            parser->current = parser->next;
-            parser->next = lexer_next_token(parser->lexer);
-
+            advance(parser);
             // if the type is not new line AND is not EOF, we have problem
             if (parser->current.type != TOK_NL &&
                 parser->current.type != TOK_EOF) {
-                parser->had_error = true;  // free after
-                free(cmd);
-                return NULL;
+                return fail_cmd(parser, cmd);
             }
             return cmd;
         }
         case TOK_MOV: {  // assign a value
             cmd->type = CMD_MOV;
-
-            parser->current = parser->next;                  // should be ident
-            parser->next = lexer_next_token(parser->lexer);  // should be comma
-
+            advance(parser);                          // ident; comma
             if (parser->current.type != TOK_IDENT) {  // expected ident
-                parser->had_error = true;
-                free(cmd);
-                return NULL;
+                return fail_cmd(parser, cmd);
             }
             cmd->destination.type = OP_VAR;
             int64_t var_index;
             if (!parse_ident(parser->current, &var_index)) {
-                parser->had_error = true;
-                free(cmd);
-                return NULL;
+                return fail_cmd(parser, cmd);
             }
             cmd->destination.as.var = var_index;
-
-            parser->current = parser->next;                  // should be comma
-            parser->next = lexer_next_token(parser->lexer);  // should be num
-
+            advance(parser);  // comma; num
             if (parser->current.type != TOK_COMMA) {
-                parser->had_error = true;
-                free(cmd);
-                return NULL;
+                return fail_cmd(parser, cmd);
             }
-
-            parser->current = parser->next;                  // should be num
-            parser->next = lexer_next_token(parser->lexer);  // should be eof
+            advance(parser);  // num; eof
             if (parser->current.type != TOK_NUM) {
-                parser->had_error = true;
-                free(cmd);
-                return NULL;
+                return fail_cmd(parser, cmd);
             }
-
             cmd->val_a.type = OP_IMM;  // value is an immediate number
             if (!parse_number(parser->current, &cmd->val_a.as.imm)) {
-                parser->had_error = true;
-                free(cmd);
-                return NULL;
+                return fail_cmd(parser, cmd);
             }
-
-            parser->current = parser->next;                  // should be num
-            parser->next = lexer_next_token(parser->lexer);  // should be NL
+            advance(parser);  // num; nl
             if (parser->current.type != TOK_NL &&
                 parser->current.type != TOK_EOF) {
-                parser->had_error = true;
-                free(cmd);
-                return NULL;
+                return fail_cmd(parser, cmd);
             }
             return cmd;
         }
         case TOK_PRINT: {
             cmd->type = CMD_PRINT;
-
-            parser->current = parser->next;  // should be ident or num
-            parser->next = lexer_next_token(parser->lexer);  // should be comma
-
+            advance(parser);  // ident/num ; comma
             if (parser->current.type == TOK_IDENT) {
                 int64_t var_index;
                 if (!parse_ident(parser->current, &var_index)) {
-                    parser->had_error = true;
-                    free(cmd);
-                    return NULL;
+                    return fail_cmd(parser, cmd);
                 }
                 cmd->val_a.type = OP_VAR;
                 cmd->val_a.as.var = var_index;
             } else if (parser->current.type == TOK_NUM) {
                 int64_t val;
                 if (!parse_number(parser->current, &val)) {
-                    parser->had_error = true;
-                    free(cmd);
-                    return NULL;
+                    return fail_cmd(parser, cmd);
                 }
                 cmd->val_a.type = OP_IMM;
                 cmd->val_a.as.imm = val;
             } else {
-                parser->had_error = true;
-                free(cmd);
-                return NULL;
+                return fail_cmd(parser, cmd);
             }
-
-            parser->current = parser->next;                  // should be comma
-            parser->next = lexer_next_token(parser->lexer);  // should be base
-
+            advance(parser);  // comma; base
             if (parser->current.type != TOK_COMMA) {
-                parser->had_error = true;
-                free(cmd);
-                return NULL;
+                return fail_cmd(parser, cmd);
             }
-
-            parser->current = parser->next;  // should be base
-            parser->next = lexer_next_token(parser->lexer);
-
+            advance(parser);  // base
             if (parser->current.type != TOK_IDENT ||
                 parser->current.length != 1) {
-                parser->had_error = true;
-                free(cmd);
-                return NULL;
+                return fail_cmd(parser, cmd);
             }
-
             char base_type = parser->current.lexeme[0];
             if (base_type != 'B' && base_type != 'X' && base_type != 'D') {
-                parser->had_error = true;
-                free(cmd);
-                return NULL;
+                return fail_cmd(parser, cmd);
             }
             cmd->val_b.type = OP_BASE;
             cmd->val_b.as.base = base_type;
-
-            parser->current = parser->next;  // NL / EOF
-            parser->next = lexer_next_token(parser->lexer);
-
+            advance(parser);  // nl; eof
             if (parser->current.type != TOK_NL &&
                 parser->current.type != TOK_EOF) {
-                parser->had_error = true;
-                free(cmd);
-                return NULL;
+                return fail_cmd(parser, cmd);
             }
-
             return cmd;
         }
         case TOK_ADD: {
             cmd->type = CMD_ADD;
-
-            parser->current = parser->next;                  // tok ident
-            parser->next = lexer_next_token(parser->lexer);  // tok comma
-
+            advance(parser);  // ident; comma
             if (parser->current.type != TOK_IDENT) {
-                parser->had_error = true;
-                free(cmd);
-                return NULL;
+                return fail_cmd(parser, cmd);
             }
-
             // set the destination for command
             cmd->destination.type = OP_VAR;
             int64_t var_index;
             if (!parse_ident(parser->current, &var_index)) {
-                parser->had_error = true;
-                free(cmd);
-                return NULL;
+                return fail_cmd(parser, cmd);
             }
             cmd->destination.as.var = var_index;
-
-            parser->current = parser->next;                  // tok comma
-            parser->next = lexer_next_token(parser->lexer);  // tok ident
-
+            advance(parser);  // comma; ident
             if (parser->current.type != TOK_COMMA) {
-                parser->had_error = true;
-                free(cmd);
-                return NULL;
+                return fail_cmd(parser, cmd);
             }
-
-            parser->current = parser->next;                  // tok ident
-            parser->next = lexer_next_token(parser->lexer);  // tok comma
-
+            advance(parser);  // ident;comma
             if (parser->current.type != TOK_IDENT) {
-                parser->had_error = true;
-                free(cmd);
-                return NULL;
+                return fail_cmd(parser, cmd);
             }
-
             // set val_a in command
             cmd->val_a.type = OP_VAR;
             int64_t val_a_index;
             if (!parse_ident(parser->current, &val_a_index)) {
-                parser->had_error = true;
-                free(cmd);
-                return NULL;
+                return fail_cmd(parser, cmd);
             }
             cmd->val_a.as.var = val_a_index;
-
-            parser->current = parser->next;                  // tok comma
-            parser->next = lexer_next_token(parser->lexer);  // tok ident/num
-
+            advance(parser);  // comma ; ident/num
             if (parser->current.type != TOK_COMMA) {
-                parser->had_error = true;
-                free(cmd);
-                return NULL;
+                return fail_cmd(parser, cmd);
             }
-
-            parser->current = parser->next;                  // tok ident/num
-            parser->next = lexer_next_token(parser->lexer);  // tok eof
-
+            advance(parser);  // ident/num ; eof
             // check if it is ident/num
             if (parser->current.type != TOK_IDENT &&
                 parser->current.type != TOK_NUM) {
-                parser->had_error = true;
-                free(cmd);
-                return NULL;
+                return fail_cmd(parser, cmd);
             }
-
             int64_t val_b_index;
             if (parser->current.type == TOK_IDENT) {
                 cmd->val_b.type = OP_VAR;
                 if (!parse_ident(parser->current, &val_b_index)) {
-                    parser->had_error = true;
-                    free(cmd);
-                    return NULL;
+                    return fail_cmd(parser, cmd);
                 }
                 cmd->val_b.as.var = val_b_index;
             } else if (parser->current.type == TOK_NUM) {
                 cmd->val_b.type = OP_IMM;
                 if (!parse_number(parser->current, &val_b_index)) {
-                    parser->had_error = true;
-                    free(cmd);
-                    return NULL;
+                    return fail_cmd(parser, cmd);
                 }
                 cmd->val_b.as.imm = val_b_index;
             } else {
-                parser->had_error = true;
-                free(cmd);
-                return NULL;
+                return fail_cmd(parser, cmd);
             }
-
-            parser->current = parser->next;  // tok eof/nl
-            parser->next = lexer_next_token(parser->lexer);
-
+            advance(parser);  // eof/nl
             if (parser->current.type != TOK_NL &&
                 parser->current.type != TOK_EOF) {
-                parser->had_error = true;
-                free(cmd);
-                return NULL;
+                return fail_cmd(parser, cmd);
             }
             return cmd;
         }
         case TOK_SUB: {  // exact same as add
             cmd->type = CMD_SUB;
-
-            parser->current = parser->next;                  // tok ident
-            parser->next = lexer_next_token(parser->lexer);  // tok comma
-
+            advance(parser);  // ident;comma
             if (parser->current.type != TOK_IDENT) {
-                parser->had_error = true;
-                free(cmd);
-                return NULL;
+                return fail_cmd(parser, cmd);
             }
-
             // set the destination for command
             cmd->destination.type = OP_VAR;
             int64_t var_index;
             if (!parse_ident(parser->current, &var_index)) {
-                parser->had_error = true;
-                free(cmd);
-                return NULL;
+                return fail_cmd(parser, cmd);
             }
             cmd->destination.as.var = var_index;
-
-            parser->current = parser->next;                  // tok comma
-            parser->next = lexer_next_token(parser->lexer);  // tok ident
-
+            advance(parser);  // comma; ident
             if (parser->current.type != TOK_COMMA) {
-                parser->had_error = true;
-                free(cmd);
-                return NULL;
+                return fail_cmd(parser, cmd);
             }
-
-            parser->current = parser->next;                  // tok ident
-            parser->next = lexer_next_token(parser->lexer);  // tok comma
-
+            advance(parser);  // ident ; comma
             if (parser->current.type != TOK_IDENT) {
-                parser->had_error = true;
-                free(cmd);
-                return NULL;
+                return fail_cmd(parser, cmd);
             }
-
             // set val_a in command
             cmd->val_a.type = OP_VAR;
             int64_t val_a_index;
             if (!parse_ident(parser->current, &val_a_index)) {
-                parser->had_error = true;
-                free(cmd);
-                return NULL;
+                return fail_cmd(parser, cmd);
             }
             cmd->val_a.as.var = val_a_index;
-
-            parser->current = parser->next;                  // tok comma
-            parser->next = lexer_next_token(parser->lexer);  // tok ident/num
-
+            advance(parser);  // comma; ident/num
             if (parser->current.type != TOK_COMMA) {
-                parser->had_error = true;
-                free(cmd);
-                return NULL;
+                return fail_cmd(parser, cmd);
             }
-
-            parser->current = parser->next;                  // tok ident/num
-            parser->next = lexer_next_token(parser->lexer);  // tok eof
-
+            advance(parser);  // ident/num; eof
             // check if it is ident/num
             if (parser->current.type != TOK_IDENT &&
                 parser->current.type != TOK_NUM) {
-                parser->had_error = true;
-                free(cmd);
-                return NULL;
+                return fail_cmd(parser, cmd);
             }
-
             int64_t val_b_index;
             if (parser->current.type == TOK_IDENT) {
                 cmd->val_b.type = OP_VAR;
                 if (!parse_ident(parser->current, &val_b_index)) {
-                    parser->had_error = true;
-                    free(cmd);
-                    return NULL;
+                    return fail_cmd(parser, cmd);
                 }
                 cmd->val_b.as.var = val_b_index;
             } else if (parser->current.type == TOK_NUM) {
                 cmd->val_b.type = OP_IMM;
                 if (!parse_number(parser->current, &val_b_index)) {
-                    parser->had_error = true;
-                    free(cmd);
-                    return NULL;
+                    return fail_cmd(parser, cmd);
                 }
                 cmd->val_b.as.imm = val_b_index;
             } else {
-                parser->had_error = true;
-                free(cmd);
-                return NULL;
+                return fail_cmd(parser, cmd);
             }
-
-            parser->current = parser->next;  // tok eof/nl
-            parser->next = lexer_next_token(parser->lexer);
-
+            advance(parser);  // eof/nl
             if (parser->current.type != TOK_NL &&
                 parser->current.type != TOK_EOF) {
-                parser->had_error = true;
-                free(cmd);
-                return NULL;
+                return fail_cmd(parser, cmd);
             }
             return cmd;
         }
         case TOK_CMP: {
             cmd->type = CMD_CMP;
-
-            parser->current = parser->next;                  // ident
-            parser->next = lexer_next_token(parser->lexer);  // comma
-
+            advance(parser);  // ident; comma
             if (parser->current.type != TOK_IDENT) {
-                parser->had_error = true;
-                free(cmd);
-                return NULL;
+                return fail_cmd(parser, cmd);
             }
-
             // set the val_a for command
             cmd->val_a.type = OP_VAR;
             int64_t val_a_index;
             if (!parse_ident(parser->current, &val_a_index)) {
-                parser->had_error = true;
-                free(cmd);
-                return NULL;
+                return fail_cmd(parser, cmd);
             }
             cmd->val_a.as.var = val_a_index;
-
-            parser->current = parser->next;                  // tok comma
-            parser->next = lexer_next_token(parser->lexer);  // tok ident/num
-
+            advance(parser);  // comma; ident/num
             if (parser->current.type != TOK_COMMA) {
-                parser->had_error = true;
-                free(cmd);
-                return NULL;
+                return fail_cmd(parser, cmd);
             }
-
-            parser->current = parser->next;                  // tok ident/num
-            parser->next = lexer_next_token(parser->lexer);  // tok eof
-
+            advance(parser);  // ident/num; eof
             if (parser->current.type != TOK_IDENT &&
                 parser->current.type != TOK_NUM) {
-                parser->had_error = true;
-                free(cmd);
-                return NULL;
+                return fail_cmd(parser, cmd);
             }
-
             // set the val_b for command
             int64_t val_b_index;
             if (parser->current.type == TOK_IDENT) {
                 cmd->val_b.type = OP_VAR;
                 if (!parse_ident(parser->current, &val_b_index)) {
-                    parser->had_error = true;
-                    free(cmd);
-                    return NULL;
+                    return fail_cmd(parser, cmd);
                 }
                 cmd->val_b.as.var = val_b_index;
             } else if (parser->current.type == TOK_NUM) {
                 cmd->val_b.type = OP_IMM;
                 if (!parse_number(parser->current, &val_b_index)) {
-                    parser->had_error = true;
-                    free(cmd);
-                    return NULL;
+                    return fail_cmd(parser, cmd);
                 }
                 cmd->val_b.as.imm = val_b_index;
             }
-
-            parser->current = parser->next;  // eof
-            parser->next = lexer_next_token(parser->lexer);
-
+            advance(parser);  // eof
             if (parser->current.type != TOK_NL &&
                 parser->current.type != TOK_EOF) {
-                parser->had_error = true;
-                free(cmd);
-                return NULL;
+                return fail_cmd(parser, cmd);
             }
-
             return cmd;
         }
         case TOK_CMP_U: {
             cmd->type = CMD_CMP_U;
-
-            parser->current = parser->next;                  // ident
-            parser->next = lexer_next_token(parser->lexer);  // comma
-
+            advance(parser);  // ident; comma
             if (parser->current.type != TOK_IDENT) {
-                parser->had_error = true;
-                free(cmd);
-                return NULL;
+                return fail_cmd(parser, cmd);
             }
-
             // set the val_a for command
             cmd->val_a.type = OP_VAR;
             int64_t val_a_index;
             if (!parse_ident(parser->current, &val_a_index)) {
-                parser->had_error = true;
-                free(cmd);
-                return NULL;
+                return fail_cmd(parser, cmd);
             }
             cmd->val_a.as.var = val_a_index;
-
-            parser->current = parser->next;                  // tok comma
-            parser->next = lexer_next_token(parser->lexer);  // tok ident/num
-
+            advance(parser);  // comma; ident/num
             if (parser->current.type != TOK_COMMA) {
-                parser->had_error = true;
-                free(cmd);
-                return NULL;
+                return fail_cmd(parser, cmd);
             }
-
-            parser->current = parser->next;                  // tok ident/num
-            parser->next = lexer_next_token(parser->lexer);  // tok eof
-
+            advance(parser);  // ident/num; eof
             if (parser->current.type != TOK_IDENT &&
                 parser->current.type != TOK_NUM) {
-                parser->had_error = true;
-                free(cmd);
-                return NULL;
+                return fail_cmd(parser, cmd);
             }
-
             // set the val_b for command
             int64_t val_b_index;
             if (parser->current.type == TOK_IDENT) {
                 cmd->val_b.type = OP_VAR;
                 if (!parse_ident(parser->current, &val_b_index)) {
-                    parser->had_error = true;
-                    free(cmd);
-                    return NULL;
+                    return fail_cmd(parser, cmd);
                 }
                 cmd->val_b.as.var = val_b_index;
             } else if (parser->current.type == TOK_NUM) {
                 cmd->val_b.type = OP_IMM;
                 if (!parse_number(parser->current, &val_b_index)) {
-                    parser->had_error = true;
-                    free(cmd);
-                    return NULL;
+                    return fail_cmd(parser, cmd);
                 }
                 cmd->val_b.as.imm = val_b_index;
             }
-
-            parser->current = parser->next;  // eof
-            parser->next = lexer_next_token(parser->lexer);
+            advance(parser);  // eof
 
             if (parser->current.type != TOK_NL &&
                 parser->current.type != TOK_EOF) {
-                parser->had_error = true;
-                free(cmd);
-                return NULL;
+                return fail_cmd(parser, cmd);
             }
             return cmd;
         }
+        // week 2 end
+        // week 3 start
+        // case TOK_AND: {
+        //     cmd->type = CMD_AND;
+        // }
         default:
             // unrecognized command
             parser->had_error = true;
             free(cmd);
             break;
     }
-
     return NULL;
 }
 
@@ -635,8 +445,7 @@ Command* parse_commands(Parser* parser) {
         }
         // skip newlines
         while (parser->current.type == TOK_NL) {
-            parser->current = parser->next;
-            parser->next = lexer_next_token(parser->lexer);
+            advance(parser);
         }
         Command* new_cmd = parse_cmd(parser);
         if (!new_cmd) {

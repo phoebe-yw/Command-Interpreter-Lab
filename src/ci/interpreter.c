@@ -51,6 +51,7 @@ void interpret(Interpreter* intr, Command* commands) {
     Command* current = commands;
     while (current != NULL) {
         switch (current->type) {
+            // week 2 start
             case CMD_NOP:
                 break;
             case CMD_MOV: {
@@ -183,6 +184,8 @@ void interpret(Interpreter* intr, Command* commands) {
                 }
                 break;
             }
+            // week 2 end
+            // week 3 start
             default:
                 return;
         }
