@@ -205,69 +205,9 @@ static Command* parse_cmd(Parser* parser) {
             }
             return cmd;
         }
-        case TOK_ADD: {
-            cmd->type = CMD_ADD;
-            advance(parser);  // ident; comma
-            if (parser->current.type != TOK_IDENT) {
-                return fail_cmd(parser, cmd);
-            }
-            // set the destination for command
-            cmd->destination.type = OP_VAR;
-            int64_t var_index;
-            if (!parse_ident(parser->current, &var_index)) {
-                return fail_cmd(parser, cmd);
-            }
-            cmd->destination.as.var = var_index;
-            advance(parser);  // comma; ident
-            if (parser->current.type != TOK_COMMA) {
-                return fail_cmd(parser, cmd);
-            }
-            advance(parser);  // ident;comma
-            if (parser->current.type != TOK_IDENT) {
-                return fail_cmd(parser, cmd);
-            }
-            // set val_a in command
-            cmd->val_a.type = OP_VAR;
-            int64_t val_a_index;
-            if (!parse_ident(parser->current, &val_a_index)) {
-                return fail_cmd(parser, cmd);
-            }
-            cmd->val_a.as.var = val_a_index;
-            advance(parser);  // comma ; ident/num
-            if (parser->current.type != TOK_COMMA) {
-                return fail_cmd(parser, cmd);
-            }
-            advance(parser);  // ident/num ; eof
-            // check if it is ident/num
-            if (parser->current.type != TOK_IDENT &&
-                parser->current.type != TOK_NUM) {
-                return fail_cmd(parser, cmd);
-            }
-            int64_t val_b_index;
-            if (parser->current.type == TOK_IDENT) {
-                cmd->val_b.type = OP_VAR;
-                if (!parse_ident(parser->current, &val_b_index)) {
-                    return fail_cmd(parser, cmd);
-                }
-                cmd->val_b.as.var = val_b_index;
-            } else if (parser->current.type == TOK_NUM) {
-                cmd->val_b.type = OP_IMM;
-                if (!parse_number(parser->current, &val_b_index)) {
-                    return fail_cmd(parser, cmd);
-                }
-                cmd->val_b.as.imm = val_b_index;
-            } else {
-                return fail_cmd(parser, cmd);
-            }
-            advance(parser);  // eof/nl
-            if (parser->current.type != TOK_NL &&
-                parser->current.type != TOK_EOF) {
-                return fail_cmd(parser, cmd);
-            }
-            return cmd;
-        }
+        case TOK_ADD:    // fall through to sub
         case TOK_SUB: {  // exact same as add
-            cmd->type = CMD_SUB;
+            cmd->type = (token.type == TOK_ADD) ? CMD_ADD : CMD_SUB;
             advance(parser);  // ident;comma
             if (parser->current.type != TOK_IDENT) {
                 return fail_cmd(parser, cmd);
@@ -418,9 +358,64 @@ static Command* parse_cmd(Parser* parser) {
         }
         // week 2 end
         // week 3 start
-        // case TOK_AND: {
-        //     cmd->type = CMD_AND;
-        // }
+        case TOK_AND:
+        case TOK_ORR:
+        case TOK_EOR: {
+            if (token.type == TOK_AND) {
+                cmd->type = CMD_AND;
+            } else if (token.type == TOK_ORR) {
+                cmd->type = CMD_ORR;
+            } else {
+                cmd->type = CMD_EOR;
+            }
+            advance(parser);  // ident; comma
+            if (parser->current.type != TOK_IDENT) {
+                return fail_cmd(parser, cmd);
+            }
+            // set the destination for command
+            cmd->destination.type = OP_VAR;
+            int64_t var_index;
+            if (!parse_ident(parser->current, &var_index)) {
+                return fail_cmd(parser, cmd);
+            }
+            cmd->destination.as.var = var_index;
+            advance(parser);  // comma; ident
+            if (parser->current.type != TOK_COMMA) {
+                return fail_cmd(parser, cmd);
+            }
+            advance(parser);  // ident; comma
+            if (parser->current.type != TOK_IDENT) {
+                return fail_cmd(parser, cmd);
+            }
+            // set val_a in command
+            cmd->val_a.type = OP_VAR;
+            int64_t val_a_index;
+            if (!parse_ident(parser->current, &val_a_index)) {
+                return fail_cmd(parser, cmd);
+            }
+            cmd->val_a.as.var = val_a_index;
+            advance(parser);  // comma ; ident
+            if (parser->current.type != TOK_COMMA) {
+                return fail_cmd(parser, cmd);
+            }
+            advance(parser);  // ident; eof
+            // check if it is ident
+            if (parser->current.type != TOK_IDENT) {
+                return fail_cmd(parser, cmd);
+            }
+            int64_t val_b_index;
+            cmd->val_b.type = OP_VAR;
+            if (!parse_ident(parser->current, &val_b_index)) {
+                return fail_cmd(parser, cmd);
+            }
+            cmd->val_b.as.var = val_b_index;
+            advance(parser);  // eof/nl
+            if (parser->current.type != TOK_NL &&
+                parser->current.type != TOK_EOF) {
+                return fail_cmd(parser, cmd);
+            }
+            return cmd;
+        }
         default:
             // unrecognized command
             parser->had_error = true;

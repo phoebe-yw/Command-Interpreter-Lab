@@ -186,6 +186,42 @@ void interpret(Interpreter* intr, Command* commands) {
             }
             // week 2 end
             // week 3 start
+            case CMD_AND: {
+                if (current->destination.type != OP_VAR ||
+                    current->val_a.type != OP_VAR ||
+                    current->val_b.type != OP_VAR) {
+                    intr->had_error = true;
+                    return;
+                }
+                int64_t res = intr->variables[current->val_a.as.var] &
+                              intr->variables[current->val_b.as.var];
+                intr->variables[current->destination.as.var] = res;
+                break;
+            }
+            case CMD_ORR: {
+                if (current->destination.type != OP_VAR ||
+                    current->val_a.type != OP_VAR ||
+                    current->val_b.type != OP_VAR) {
+                    intr->had_error = true;
+                    return;
+                }
+                int64_t res = intr->variables[current->val_a.as.var] |
+                              intr->variables[current->val_b.as.var];
+                intr->variables[current->destination.as.var] = res;
+                break;
+            }
+            case CMD_EOR: {
+                if (current->destination.type != OP_VAR ||
+                    current->val_a.type != OP_VAR ||
+                    current->val_b.type != OP_VAR) {
+                    intr->had_error = true;
+                    return;
+                }
+                int64_t res = intr->variables[current->val_a.as.var] ^
+                              intr->variables[current->val_b.as.var];
+                intr->variables[current->destination.as.var] = res;
+                break;
+            }
             default:
                 return;
         }
