@@ -222,6 +222,43 @@ void interpret(Interpreter* intr, Command* commands) {
                 intr->variables[current->destination.as.var] = res;
                 break;
             }
+            case CMD_ASR: {
+                if (current->destination.type != OP_VAR ||
+                    current->val_a.type != OP_VAR ||
+                    current->val_b.type != OP_IMM) {
+                    intr->had_error = true;
+                    return;
+                }
+                int64_t res = intr->variables[current->val_a.as.var] >>
+                              current->val_b.as.imm;
+                intr->variables[current->destination.as.var] = res;
+                break;
+            }
+            case CMD_LSR: {
+                if (current->destination.type != OP_VAR ||
+                    current->val_a.type != OP_VAR ||
+                    current->val_b.type != OP_IMM) {
+                    intr->had_error = true;
+                    return;
+                }
+                uint64_t res =
+                    (uint64_t)intr->variables[current->val_a.as.var] >>
+                    (uint64_t)current->val_b.as.imm;
+                intr->variables[current->destination.as.var] = res;
+                break;
+            }
+            case CMD_LSL: {
+                if (current->destination.type != OP_VAR ||
+                    current->val_a.type != OP_VAR ||
+                    current->val_b.type != OP_IMM) {
+                    intr->had_error = true;
+                    return;
+                }
+                uint64_t res = (uint64_t)intr->variables[current->val_a.as.var]
+                               << (uint64_t)current->val_b.as.imm;
+                intr->variables[current->destination.as.var] = res;
+                break;
+            }
             default:
                 return;
         }

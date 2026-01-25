@@ -416,6 +416,65 @@ static Command* parse_cmd(Parser* parser) {
             }
             return cmd;
         }
+        case TOK_ASR:
+        case TOK_LSR:
+        case TOK_LSL: {
+            if (token.type == TOK_ASR) {
+                cmd->type = CMD_ASR;
+            } else if (token.type == TOK_LSR) {
+                cmd->type = CMD_LSR;
+            } else {
+                cmd->type = CMD_LSL;
+            }
+
+            advance(parser);  // ident
+            if (parser->current.type != TOK_IDENT) {
+                return fail_cmd(parser, cmd);
+            }
+            // set the destination for command
+            cmd->destination.type = OP_VAR;
+            int64_t var_index;
+            if (!parse_ident(parser->current, &var_index)) {
+                return fail_cmd(parser, cmd);
+            }
+            cmd->destination.as.var = var_index;
+            advance(parser);  // comma; ident
+            if (parser->current.type != TOK_COMMA) {
+                return fail_cmd(parser, cmd);
+            }
+            advance(parser);  // ident; comma
+            if (parser->current.type != TOK_IDENT) {
+                return fail_cmd(parser, cmd);
+            }
+            // set val_a in command
+            cmd->val_a.type = OP_VAR;
+            int64_t val_a_index;
+            if (!parse_ident(parser->current, &val_a_index)) {
+                return fail_cmd(parser, cmd);
+            }
+            cmd->val_a.as.var = val_a_index;
+            advance(parser);  // comma; num
+            if (parser->current.type != TOK_COMMA) {
+                return fail_cmd(parser, cmd);
+            }
+            advance(parser);  // num; eof
+            // check if it is num
+            if (parser->current.type != TOK_NUM) {
+                return fail_cmd(parser, cmd);
+            }
+            int64_t val_b_index;
+            cmd->val_b.type = OP_IMM;
+            if (!parse_number(parser->current, &val_b_index)) {
+                return fail_cmd(parser, cmd);
+            }
+            cmd->val_b.as.imm = val_b_index;
+            advance(parser);  // eof/nl
+            if (parser->current.type != TOK_NL &&
+                parser->current.type != TOK_EOF) {
+                return fail_cmd(parser, cmd);
+            }
+            return cmd;
+        }
         default:
             // unrecognized command
             parser->had_error = true;
