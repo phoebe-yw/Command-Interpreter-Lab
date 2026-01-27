@@ -44,7 +44,5 @@ int ci_run_source(const char* src, bool print_lex, bool print_parse) {
     print_interpreter_state(&i);
     mem_print();
 
-    // free_command(commands);
-
     return (i.had_error) ? -1 : 0;
 }

@@ -11,6 +11,10 @@ void free_command(Command* command) {
     // TODO: free the passed in linked list of commands.
     while (command != NULL) {
         Command* next = command->next;
+        if (command->val_a.type == OP_STR && command->val_a.as.str != NULL) {
+            free(command->val_a.as.str);
+            command->val_a.as.str = NULL;
+        }
         free(command);
         command = next;
     }

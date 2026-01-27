@@ -5,6 +5,9 @@
 
 #include <inttypes.h>
 #include <stdio.h>
+#include <string.h>
+
+#include "mem.h"
 
 void interpreter_init(Interpreter* intr) {
     if (!intr) {
@@ -164,6 +167,10 @@ void interpret(Interpreter* intr, Command* commands) {
                     intr->had_error = true;
                     return;
                 }
+                if (current->val_b.type != OP_BASE) {
+                    intr->had_error = true;
+                    return;
+                }
                 int64_t value;
                 if (current->val_a.type == OP_VAR) {
                     value = intr->variables[current->val_a.as.var];
@@ -181,6 +188,28 @@ void interpret(Interpreter* intr, Command* commands) {
                     printf("0b");
                     print_binary(value);
                     printf("\n");
+                    // added for week 3
+                } else if (base_type == 'S') {  // print string
+                    uint64_t addr = (uint64_t)value;
+                    if (addr >= MEM_CAPACITY) {
+                        intr->had_error = true;
+                        return;
+                    }
+                    for (size_t off = addr; off < MEM_CAPACITY; off++) {
+                        uint8_t str;
+                        if (!mem_load(&str, off, 1)) {
+                            intr->had_error = true;
+                            return;
+                        }
+                        if (str == '\0') {
+                            break;
+                        }
+                        putchar((char)str);
+                    }
+                    putchar('\n');
+                } else {
+                    intr->had_error = true;
+                    return;
                 }
                 break;
             }
@@ -257,6 +286,33 @@ void interpret(Interpreter* intr, Command* commands) {
                 uint64_t res = (uint64_t)intr->variables[current->val_a.as.var]
                                << (uint64_t)current->val_b.as.imm;
                 intr->variables[current->destination.as.var] = res;
+                break;
+            }
+            case CMD_PUT: {
+                if (current->val_a.type != OP_STR ||
+                    (current->val_b.type != OP_IMM &&
+                     current->val_b.type != OP_VAR)) {
+                    intr->had_error = true;
+                    return;
+                }
+                int64_t addr64 = (current->val_b.type == OP_IMM)
+                                     ? current->val_b.as.imm
+                                     : intr->variables[current->val_b.as.var];
+                if (addr64 < 0 || addr64 >= MEM_CAPACITY) {
+                    intr->had_error = true;
+                    return;
+                }
+                size_t stored_addr = (size_t)addr64;
+                const uint8_t* s = (const uint8_t*)current->val_a.as.str;
+                size_t len = strlen(current->val_a.as.str) + 1;
+
+                for (size_t i = 0; i < len; i++) {
+                    uint8_t b = s[i];
+                    if (!mem_store(&b, stored_addr + i, 1)) {
+                        intr->had_error = true;
+                        return;
+                    }
+                }
                 break;
             }
             default:

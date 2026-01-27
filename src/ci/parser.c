@@ -4,6 +4,7 @@
 #include "parser.h"
 
 #include <stdlib.h>
+#include <string.h>
 
 #include "command_type.h"
 #include "token_type.h"
@@ -193,7 +194,8 @@ static Command* parse_cmd(Parser* parser) {
                 return fail_cmd(parser, cmd);
             }
             char base_type = parser->current.lexeme[0];
-            if (base_type != 'B' && base_type != 'X' && base_type != 'D') {
+            if (base_type != 'B' && base_type != 'X' && base_type != 'D' &&
+                base_type != 'S') {  // added S for week 3
                 return fail_cmd(parser, cmd);
             }
             cmd->val_b.type = OP_BASE;
@@ -469,6 +471,57 @@ static Command* parse_cmd(Parser* parser) {
             }
             cmd->val_b.as.imm = val_b_index;
             advance(parser);  // eof/nl
+            if (parser->current.type != TOK_NL &&
+                parser->current.type != TOK_EOF) {
+                return fail_cmd(parser, cmd);
+            }
+            return cmd;
+        }
+        case TOK_PUT: {
+            cmd->type = CMD_PUT;
+            advance(parser);  // str; comma
+            if (parser->current.type != TOK_STR) {
+                return fail_cmd(parser, cmd);
+            }
+
+            cmd->val_a.type = OP_STR;
+            // allocate memory for a string and null terminate it
+            Token curr = parser->current;
+            char* str = malloc((size_t)curr.length + 1);
+            if (!str) {
+                return fail_cmd(parser, cmd);
+            }
+            // copies new_len bytes from memory area
+            // lexeme to new mallocated memory area str
+            memcpy(str, curr.lexeme, (size_t)curr.length);
+            str[curr.length] = '\0';
+            cmd->val_a.as.str = str;
+
+            advance(parser);  // comma; ident/num
+            if (parser->current.type != TOK_COMMA) {
+                return fail_cmd(parser, cmd);
+            }
+            advance(parser);  // ident/num; eof
+            if (parser->current.type != TOK_IDENT &&
+                parser->current.type != TOK_NUM) {
+                return fail_cmd(parser, cmd);
+            }
+            if (parser->current.type == TOK_IDENT) {
+                int64_t val_b_index;
+                if (!parse_ident(parser->current, &val_b_index)) {
+                    return fail_cmd(parser, cmd);
+                }
+                cmd->val_b.type = OP_VAR;
+                cmd->val_b.as.var = val_b_index;
+            } else if (parser->current.type == TOK_NUM) {
+                int64_t val_b_num;
+                if (!parse_number(parser->current, &val_b_num)) {
+                    return fail_cmd(parser, cmd);
+                }
+                cmd->val_b.type = OP_IMM;
+                cmd->val_b.as.imm = val_b_num;
+            }
+            advance(parser);  // eof
             if (parser->current.type != TOK_NL &&
                 parser->current.type != TOK_EOF) {
                 return fail_cmd(parser, cmd);
