@@ -46,7 +46,6 @@ void interpret(Interpreter* intr, Command* commands) {
     if (!intr || !commands) {
         return;
     }
-
     // TODO: Implement the interpreter logic here.
     // Loop through commands, execute them and update interpreter state.
     // Should look a lot like the logic in `parser.c`, except now with command
@@ -67,14 +66,7 @@ void interpret(Interpreter* intr, Command* commands) {
                 intr->variables[current->destination.as.var] = val;
                 break;
             }
-            case CMD_ADD:
-                if (current->destination.type != OP_VAR ||
-                    current->val_a.type != OP_VAR ||
-                    (current->val_b.type != OP_VAR &&
-                     current->val_b.type != OP_IMM)) {
-                    intr->had_error = true;
-                    return;
-                }
+            case CMD_ADD: {
                 int64_t sum;
                 if (current->val_b.type == OP_VAR) {
                     sum = intr->variables[current->val_a.as.var] +
@@ -85,14 +77,8 @@ void interpret(Interpreter* intr, Command* commands) {
                 }
                 intr->variables[current->destination.as.var] = sum;
                 break;
+            }
             case CMD_SUB: {
-                if (current->destination.type != OP_VAR ||
-                    current->val_a.type != OP_VAR ||
-                    (current->val_b.type != OP_VAR &&
-                     current->val_b.type != OP_IMM)) {
-                    intr->had_error = true;
-                    return;
-                }
                 int64_t diff;
                 if (current->val_b.type == OP_VAR) {
                     diff = intr->variables[current->val_a.as.var] -
@@ -105,23 +91,13 @@ void interpret(Interpreter* intr, Command* commands) {
                 break;
             }
             case CMD_CMP: {
-                if (current->val_a.type != OP_VAR ||
-                    (current->val_b.type != OP_VAR &&
-                     current->val_b.type != OP_IMM)) {
-                    intr->had_error = true;
-                    return;
-                }
                 intr->is_greater = false;
                 intr->is_less = false;
                 intr->is_equal = false;
                 int64_t left = intr->variables[current->val_a.as.var];
-                int64_t right;
-
-                if (current->val_b.type == OP_VAR) {
-                    right = intr->variables[current->val_b.as.var];
-                } else if (current->val_b.type == OP_IMM) {
-                    right = current->val_b.as.imm;
-                }
+                int64_t right = (current->val_b.type == OP_VAR)
+                                    ? intr->variables[current->val_b.as.var]
+                                    : current->val_b.as.imm;
 
                 if (left > right) {
                     intr->is_greater = true;
@@ -133,24 +109,15 @@ void interpret(Interpreter* intr, Command* commands) {
                 break;
             }
             case CMD_CMP_U: {
-                if (current->val_a.type != OP_VAR ||
-                    (current->val_b.type != OP_VAR &&
-                     current->val_b.type != OP_IMM)) {
-                    intr->had_error = true;
-                    return;
-                }
                 intr->is_greater = false;
                 intr->is_less = false;
                 intr->is_equal = false;
                 uint64_t left =
                     (uint64_t)intr->variables[current->val_a.as.var];
-                uint64_t right;
-
-                if (current->val_b.type == OP_VAR) {
-                    right = (uint64_t)intr->variables[current->val_b.as.var];
-                } else if (current->val_b.type == OP_IMM) {
-                    right = (uint64_t)current->val_b.as.imm;
-                }
+                uint64_t right =
+                    (current->val_b.type == OP_VAR)
+                        ? (uint64_t)intr->variables[current->val_b.as.var]
+                        : (uint64_t)current->val_b.as.imm;
 
                 if (left > right) {
                     intr->is_greater = true;
@@ -162,21 +129,9 @@ void interpret(Interpreter* intr, Command* commands) {
                 break;
             }
             case CMD_PRINT: {
-                if (current->val_a.type != OP_VAR &&
-                    current->val_a.type != OP_IMM) {
-                    intr->had_error = true;
-                    return;
-                }
-                if (current->val_b.type != OP_BASE) {
-                    intr->had_error = true;
-                    return;
-                }
-                int64_t value;
-                if (current->val_a.type == OP_VAR) {
-                    value = intr->variables[current->val_a.as.var];
-                } else if (current->val_a.type == OP_IMM) {
-                    value = current->val_a.as.imm;
-                }
+                int64_t value = (current->val_a.type == OP_VAR)
+                                    ? intr->variables[current->val_a.as.var]
+                                    : current->val_a.as.imm;
 
                 // now print the correct base B X D
                 char base_type = current->val_b.as.base;
@@ -216,60 +171,30 @@ void interpret(Interpreter* intr, Command* commands) {
             // week 2 end
             // week 3 start
             case CMD_AND: {
-                if (current->destination.type != OP_VAR ||
-                    current->val_a.type != OP_VAR ||
-                    current->val_b.type != OP_VAR) {
-                    intr->had_error = true;
-                    return;
-                }
                 int64_t res = intr->variables[current->val_a.as.var] &
                               intr->variables[current->val_b.as.var];
                 intr->variables[current->destination.as.var] = res;
                 break;
             }
             case CMD_ORR: {
-                if (current->destination.type != OP_VAR ||
-                    current->val_a.type != OP_VAR ||
-                    current->val_b.type != OP_VAR) {
-                    intr->had_error = true;
-                    return;
-                }
                 int64_t res = intr->variables[current->val_a.as.var] |
                               intr->variables[current->val_b.as.var];
                 intr->variables[current->destination.as.var] = res;
                 break;
             }
             case CMD_EOR: {
-                if (current->destination.type != OP_VAR ||
-                    current->val_a.type != OP_VAR ||
-                    current->val_b.type != OP_VAR) {
-                    intr->had_error = true;
-                    return;
-                }
                 int64_t res = intr->variables[current->val_a.as.var] ^
                               intr->variables[current->val_b.as.var];
                 intr->variables[current->destination.as.var] = res;
                 break;
             }
             case CMD_ASR: {
-                if (current->destination.type != OP_VAR ||
-                    current->val_a.type != OP_VAR ||
-                    current->val_b.type != OP_IMM) {
-                    intr->had_error = true;
-                    return;
-                }
                 int64_t res = intr->variables[current->val_a.as.var] >>
                               current->val_b.as.imm;
                 intr->variables[current->destination.as.var] = res;
                 break;
             }
             case CMD_LSR: {
-                if (current->destination.type != OP_VAR ||
-                    current->val_a.type != OP_VAR ||
-                    current->val_b.type != OP_IMM) {
-                    intr->had_error = true;
-                    return;
-                }
                 uint64_t res =
                     (uint64_t)intr->variables[current->val_a.as.var] >>
                     (uint64_t)current->val_b.as.imm;
@@ -277,32 +202,16 @@ void interpret(Interpreter* intr, Command* commands) {
                 break;
             }
             case CMD_LSL: {
-                if (current->destination.type != OP_VAR ||
-                    current->val_a.type != OP_VAR ||
-                    current->val_b.type != OP_IMM) {
-                    intr->had_error = true;
-                    return;
-                }
                 uint64_t res = (uint64_t)intr->variables[current->val_a.as.var]
                                << (uint64_t)current->val_b.as.imm;
                 intr->variables[current->destination.as.var] = res;
                 break;
             }
             case CMD_PUT: {
-                if (current->val_a.type != OP_STR ||
-                    (current->val_b.type != OP_IMM &&
-                     current->val_b.type != OP_VAR)) {
-                    intr->had_error = true;
-                    return;
-                }
-                int64_t addr64 = (current->val_b.type == OP_IMM)
-                                     ? current->val_b.as.imm
-                                     : intr->variables[current->val_b.as.var];
-                if (addr64 < 0 || addr64 >= MEM_CAPACITY) {
-                    intr->had_error = true;
-                    return;
-                }
-                size_t stored_addr = (size_t)addr64;
+                int64_t addr = (current->val_b.type == OP_IMM)
+                                   ? current->val_b.as.imm
+                                   : intr->variables[current->val_b.as.var];
+                size_t stored_addr = (size_t)addr;
                 const uint8_t* s = (const uint8_t*)current->val_a.as.str;
                 size_t len = strlen(current->val_a.as.str) + 1;
 
@@ -315,12 +224,37 @@ void interpret(Interpreter* intr, Command* commands) {
                 }
                 break;
             }
+            case CMD_STORE: {
+                size_t bytes = (size_t)current->val_b.as.imm;
+                int64_t offset = (current->val_a.type == OP_VAR)
+                                     ? intr->variables[current->val_a.as.var]
+                                     : current->val_a.as.imm;
+                int64_t source =
+                    (int64_t)intr->variables[current->destination.as.var];
+                if (!mem_store((uint8_t*)&source, (size_t)offset, bytes)) {
+                    intr->had_error = true;
+                    return;
+                }
+                break;
+            }
+            case CMD_LOAD: {
+                size_t bytes = (size_t)current->val_b.as.imm;
+                int64_t offset = (current->val_a.type == OP_VAR)
+                                     ? intr->variables[current->val_a.as.var]
+                                     : current->val_a.as.imm;
+                uint64_t value = 0;
+                if (!mem_load((uint8_t*)&value, (size_t)offset, bytes)) {
+                    intr->had_error = true;
+                    return;
+                }
+                intr->variables[current->destination.as.var] = (int64_t)value;
+                break;
+            }
             default:
                 return;
         }
         current = current->next;
     }
-    free_command(commands);  // successful commands freed
 }
 
 void print_interpreter_state(Interpreter* intr) {

@@ -487,7 +487,7 @@ static Command* parse_cmd(Parser* parser) {
             cmd->val_a.type = OP_STR;
             // allocate memory for a string and null terminate it
             Token curr = parser->current;
-            char* str = malloc((size_t)curr.length + 1);
+            char* str = calloc(1, (size_t)curr.length + 1);
             if (!str) {
                 return fail_cmd(parser, cmd);
             }
@@ -520,6 +520,76 @@ static Command* parse_cmd(Parser* parser) {
                 }
                 cmd->val_b.type = OP_IMM;
                 cmd->val_b.as.imm = val_b_num;
+            }
+            advance(parser);  // eof
+            if (parser->current.type != TOK_NL &&
+                parser->current.type != TOK_EOF) {
+                return fail_cmd(parser, cmd);
+            }
+            return cmd;
+        }
+        case TOK_LOAD:
+        case TOK_STORE: {
+            if (token.type == TOK_LOAD) {
+                cmd->type = CMD_LOAD;
+            } else {
+                cmd->type = CMD_STORE;
+            }
+
+            advance(parser);  // ident; comma
+            if (parser->current.type != TOK_IDENT) {
+                return fail_cmd(parser, cmd);
+            }
+            cmd->destination.type = OP_VAR;
+            // set destination
+            int64_t var_index;
+            if (!parse_ident(parser->current, &var_index)) {
+                return fail_cmd(parser, cmd);
+            }
+            cmd->destination.as.var = var_index;
+            advance(parser);  // comma; left bracket
+            if (parser->current.type != TOK_COMMA) {
+                return fail_cmd(parser, cmd);
+            }
+            advance(parser);  // bracket; ident/num
+            if (parser->current.type != TOK_LBRACKET) {
+                return fail_cmd(parser, cmd);
+            }
+            advance(parser);  // ident/num; comma
+            if (parser->current.type != TOK_IDENT &&
+                parser->current.type != TOK_NUM) {
+                return fail_cmd(parser, cmd);
+            }
+            // set val_a
+            int64_t val;
+            if (parser->current.type == TOK_IDENT) {
+                cmd->val_a.type = OP_VAR;
+                if (!parse_ident(parser->current, &val)) {
+                    return fail_cmd(parser, cmd);
+                }
+                cmd->val_a.as.var = val;
+            } else if (parser->current.type == TOK_NUM) {
+                cmd->val_a.type = OP_IMM;
+                if (!parse_number(parser->current, &val)) {
+                    return fail_cmd(parser, cmd);
+                }
+                cmd->val_a.as.imm = val;
+            }
+            advance(parser);  // comma
+            if (parser->current.type != TOK_COMMA) {
+                return fail_cmd(parser, cmd);
+            }
+            advance(parser);  // num
+            // set val_b
+            int64_t val_b_num;
+            if (!parse_number(parser->current, &val_b_num)) {
+                return fail_cmd(parser, cmd);
+            }
+            cmd->val_b.type = OP_IMM;
+            cmd->val_b.as.imm = val_b_num;
+            advance(parser);  // right bracket
+            if (parser->current.type != TOK_RBRACKET) {
+                return fail_cmd(parser, cmd);
             }
             advance(parser);  // eof
             if (parser->current.type != TOK_NL &&
