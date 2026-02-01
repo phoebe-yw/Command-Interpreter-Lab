@@ -15,12 +15,24 @@
 typedef void (*HTValueFreeFn)(void *value);
 
 /**
+ * @brief Represents an entry in the hashtable.
+ */
+typedef struct ht_entry {
+    char *key;
+    void *value;
+    struct ht_entry *next;
+} HTEntry;
+
+/**
  * @brief Represents a generic hashtable.
  */
 typedef struct {
     /** Optional callback to free values (NULL if hashtable doesn't own values). */
     HTValueFreeFn free_value;
     // You will probably want to add more fields here.
+    size_t size; // number of entries
+    size_t capacity; // number of buckets
+    HTEntry **buckets; // array of bucket pointers
 } HashTable;
 
 /**
