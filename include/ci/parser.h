@@ -3,6 +3,7 @@
 
 #ifndef CI_PARSER_H
 #define CI_PARSER_H
+#include "../hashtable/hashtable.h"
 #include "command.h"
 #include "lexer.h"
 #include "token.h"
@@ -14,10 +15,12 @@
  * and maintaining state during parsing.
  */
 typedef struct {
-  Lexer *lexer;   /**< Pointer to the lexer providing tokens. */
-  bool had_error; /**< Flag indicating if an error occurred during parsing. */
-  Token current;  /**< The current token being processed. */
-  Token next;     /**< The next token to be processed. */
+    Lexer* lexer;   /**< Pointer to the lexer providing tokens. */
+    bool had_error; /**< Flag indicating if an error occurred during parsing. */
+    Token current;  /**< The current token being processed. */
+    Token next;     /**< The next token to be processed. */
+
+    HashTable* labels; /**< Hash table for storing label positions. */
 } Parser;
 
 /**
@@ -25,8 +28,10 @@ typedef struct {
  *
  * @param parser Pointer to the `Parser` structure to initialize.
  * @param lexer Pointer to the `Lexer` to be used for tokenizing input.
+ * @param labels Pointer to the `HashTable` to be used for storing label
+ * positions.
  */
-void parser_init(Parser *parser, Lexer *lexer);
+void parser_init(Parser* parser, Lexer* lexer, HashTable* labels);
 
 /**
  * @brief Parses commands from the input token stream.
@@ -41,6 +46,6 @@ void parser_init(Parser *parser, Lexer *lexer);
  * @note The caller is responsible for freeing the memory associated with the
  * returned commands.
  */
-Command *parse_commands(Parser *parser);
+Command* parse_commands(Parser* parser);
 
 #endif

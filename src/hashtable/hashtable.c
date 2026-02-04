@@ -82,7 +82,6 @@ bool ht_put(HashTable* ht, const char* key, void* value) {
     HTEntry* current = ht->buckets[index];
     while (current != NULL) {
         if (strcmp(current->key, key) == 0) {
-            // first free old value if needed
             if (ht->free_value) {
                 ht->free_value(current->value);
             }

@@ -250,6 +250,39 @@ void interpret(Interpreter* intr, Command* commands) {
                 intr->variables[current->destination.as.var] = (int64_t)value;
                 break;
             }
+            case CMD_BRANCH: {
+                bool branches = false;
+                if (current->branch_condition == BRANCH_ALWAYS) {
+                    branches = true;
+                } else if (current->branch_condition == BRANCH_EQUAL) {
+                    branches = intr->is_equal;
+                } else if (current->branch_condition == BRANCH_NOT_EQUAL) {
+                    branches = !intr->is_equal;
+                } else if (current->branch_condition == BRANCH_GREATER) {
+                    branches = intr->is_greater;
+                } else if (current->branch_condition == BRANCH_LESS) {
+                    branches = intr->is_less;
+                } else if (current->branch_condition == BRANCH_GREATER_EQUAL) {
+                    branches = intr->is_greater || intr->is_equal;
+                } else if (current->branch_condition == BRANCH_LESS_EQUAL) {
+                    branches = intr->is_less || intr->is_equal;
+                } else {
+                    intr->had_error = true;
+                    return;
+                }
+                if (branches) {
+                    char* label = current->val_a.as.str;
+                    Command* target_cmd = (Command*)ht_get(intr->labels, label);
+                    if (!target_cmd) {
+                        printf("Label not found: %s\n", label);
+                        intr->had_error = true;
+                        return;
+                    }
+                    current = target_cmd;
+                    continue;
+                }
+                break;
+            }
             default:
                 return;
         }

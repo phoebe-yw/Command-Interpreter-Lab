@@ -13,12 +13,13 @@ static bool parse_number(Token token, int64_t* result);
 static Command* parse_cmd(Parser* parser);
 
 // we have the parser reading from the lexer
-void parser_init(Parser* parser, Lexer* lexer) {
+void parser_init(Parser* parser, Lexer* lexer, HashTable* labels) {
     if (!parser) {
         return;
     }
     parser->lexer = lexer;  // set the lexer
     parser->had_error = false;
+    parser->labels = labels;
     parser->current = lexer_next_token(parser->lexer);  // first token
     parser->next = lexer_next_token(parser->lexer);     // second token
 }
@@ -83,6 +84,17 @@ static Command* fail_cmd(Parser* parser, Command* cmd) {
     parser->had_error = true;  // free after
     free(cmd);
     return NULL;
+}
+
+// helper method to make token into null terminated string
+static char* token_to_str(Token token) {
+    char* str = calloc(1, (size_t)token.length + 1);
+    if (!str) {
+        return NULL;
+    }
+    memcpy(str, token.lexeme, (size_t)token.length);
+    str[token.length] = '\0';
+    return str;
 }
 /**
  * @brief Parses a singular command.
@@ -598,6 +610,54 @@ static Command* parse_cmd(Parser* parser) {
             }
             return cmd;
         }
+        // week 3 end
+        // week 4 start
+        case TOK_BRANCH:
+        case TOK_BRANCH_EQ:
+        case TOK_BRANCH_GE:
+        case TOK_BRANCH_GT:
+        case TOK_BRANCH_LE:
+        case TOK_BRANCH_LT:
+        case TOK_BRANCH_NEQ: {
+            cmd->type = CMD_BRANCH;
+            // set branch condition
+            if (token.type == TOK_BRANCH) {
+                cmd->branch_condition = BRANCH_ALWAYS;
+            } else if (token.type == TOK_BRANCH_EQ) {
+                cmd->branch_condition = BRANCH_EQUAL;
+            } else if (token.type == TOK_BRANCH_NEQ) {
+                cmd->branch_condition = BRANCH_NOT_EQUAL;
+            } else if (token.type == TOK_BRANCH_GT) {
+                cmd->branch_condition = BRANCH_GREATER;
+            } else if (token.type == TOK_BRANCH_GE) {
+                cmd->branch_condition = BRANCH_GREATER_EQUAL;
+            } else if (token.type == TOK_BRANCH_LT) {
+                cmd->branch_condition = BRANCH_LESS;
+            } else if (token.type == TOK_BRANCH_LE) {
+                cmd->branch_condition = BRANCH_LESS_EQUAL;
+            } else {
+                return fail_cmd(parser, cmd);
+            }
+
+            advance(parser);  // label
+            if (parser->current.type != TOK_IDENT) {
+                return fail_cmd(parser, cmd);
+            }
+            // set val_a to label
+            cmd->val_a.type = OP_STR;
+            char* label_str = token_to_str(parser->current);
+            if (!label_str) {
+                return fail_cmd(parser, cmd);
+            }
+            cmd->val_a.as.str = label_str;
+            advance(parser);  // eof
+            if (parser->current.type != TOK_NL &&
+                parser->current.type != TOK_EOF) {
+                free(cmd->val_a.as.str);
+                return fail_cmd(parser, cmd);
+            }
+            return cmd;
+        }
         default:
             // unrecognized command
             parser->had_error = true;
@@ -608,14 +668,14 @@ static Command* parse_cmd(Parser* parser) {
 }
 
 Command* parse_commands(Parser* parser) {
-    // TODO: Build a linked list of commands by repeatedly calling parse_cmd.
-    //
-    // For now, we try and parse a single command.
     if (!parser) {
         return NULL;
     }
     Command* head = NULL;
     Command* tail = NULL;  // keep track of last command added
+
+    char* pending_label = NULL;
+
     while (!parser->had_error) {
         if (parser->current.type == TOK_EOF) {
             break;
@@ -624,10 +684,36 @@ Command* parse_commands(Parser* parser) {
         while (parser->current.type == TOK_NL) {
             advance(parser);
         }
+
+        if (parser->current.type == TOK_IDENT &&
+            parser->next.type == TOK_COLON) {
+            if (pending_label != NULL) {
+                parser->had_error = true;
+                free(pending_label);
+                break;
+            }
+            pending_label = token_to_str(parser->current);
+            if (!pending_label) {
+                parser->had_error = true;
+                free(pending_label);
+                break;
+            }
+            advance(parser);  // move to colon
+            advance(parser);  // move past colon
+            continue;
+        }
+
         Command* new_cmd = parse_cmd(parser);
         if (!new_cmd) {
             break;
         }
+
+        if (pending_label != NULL) {
+            ht_put(parser->labels, pending_label, new_cmd);
+            free(pending_label);
+            pending_label = NULL;
+        }
+
         if (head == NULL) {
             head = new_cmd;
             tail = new_cmd;
@@ -635,6 +721,11 @@ Command* parse_commands(Parser* parser) {
             tail->next = new_cmd;
             tail = new_cmd;
         }
+    }
+
+    if (!parser->had_error && pending_label != NULL) {
+        free(pending_label);
+        parser->had_error = true;
     }
     return head;
 }

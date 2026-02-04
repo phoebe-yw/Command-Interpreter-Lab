@@ -20,6 +20,8 @@ typedef struct {
   bool is_greater; /**< Flag indicating the last comparison result (greater). */
   bool is_less;    /**< Flag indicating the last comparison result (less). */
   bool is_equal;   /**< Flag indicating the last comparison result (equal). */
+  // table field
+  HashTable* labels; /**< Pointer to the hashtable for label positions. */
 } Interpreter;
 
 /**

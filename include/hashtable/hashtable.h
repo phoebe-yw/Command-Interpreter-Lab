@@ -18,7 +18,7 @@ typedef void (*HTValueFreeFn)(void *value);
  * @brief Represents an entry in the hashtable.
  */
 typedef struct ht_entry {
-    char *key;
+    char *key; // labels
     void *value;
     struct ht_entry *next;
 } HTEntry;

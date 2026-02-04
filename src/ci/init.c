@@ -6,6 +6,7 @@
 #include <stdio.h>
 
 #include "command.h"
+#include "hashtable/hashtable.h"
 #include "interpreter.h"
 #include "lexer.h"
 #include "mem.h"
@@ -19,9 +20,12 @@ int ci_run_source(const char* src, bool print_lex, bool print_parse) {
         /* Reset so we can parse. */
         lexer_init(&l, src);
     }
+    HashTable ht;
+    ht_init(&ht, NULL);
 
     Parser p;
-    parser_init(&p, &l);
+    parser_init(&p, &l, &ht);
+
     Command* commands = parse_commands(&p);
     if (print_parse) {
         print_commands(commands);
@@ -34,15 +38,18 @@ int ci_run_source(const char* src, bool print_lex, bool print_parse) {
         printf("\nParsed commands up to this point:\n");
         print_commands(commands);
         free_command(commands);  //  added
+        ht_free(&ht);            // added
         return -1;
     }
 
     Interpreter i;
     interpreter_init(&i);
+    i.labels = &ht;  // set the labels hashtable
     interpret(&i, commands);
     print_interpreter_state(&i);
     mem_print();
     free_command(commands);  // added
+    ht_free(&ht);            // added
 
     return (i.had_error) ? -1 : 0;
 }
