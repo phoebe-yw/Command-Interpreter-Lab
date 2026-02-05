@@ -10,18 +10,32 @@
 #define NUM_VARIABLES 32
 
 /**
+ * @brief Represents a stack record for function calls in the interpreter.
+ */
+typedef struct StackRecord {
+    int64_t variables[NUM_VARIABLES]; /**< Array of variables for the stack
+                                         frame. */
+    struct StackRecord* next;         /**< Pointer to the next stack record. */
+    Command* return_address; /**< Pointer to the return address command. */
+} StackRecord;
+
+/**
  * @brief Represents the state of the interpreter during execution.
  */
 typedef struct {
-  int64_t variables[NUM_VARIABLES]; /**< Array of variables used in the
-                                       interpreter. */
-  bool had_error;  /**< Flag indicating if an error occurred during
-                      interpretation. */
-  bool is_greater; /**< Flag indicating the last comparison result (greater). */
-  bool is_less;    /**< Flag indicating the last comparison result (less). */
-  bool is_equal;   /**< Flag indicating the last comparison result (equal). */
-  // table field
-  HashTable* labels; /**< Pointer to the hashtable for label positions. */
+    int64_t variables[NUM_VARIABLES]; /**< Array of variables used in the
+                                         interpreter. */
+    bool had_error;  /**< Flag indicating if an error occurred during
+                        interpretation. */
+    bool is_greater; /**< Flag indicating the last comparison result (greater).
+                      */
+    bool is_less;    /**< Flag indicating the last comparison result (less). */
+    bool is_equal;   /**< Flag indicating the last comparison result (equal). */
+    // table field
+    HashTable* labels; /**< Pointer to the hashtable for label positions. */
+
+    StackRecord*
+        stack; /**< Pointer to the top of the stack for function calls. */
 } Interpreter;
 
 /**
@@ -29,7 +43,7 @@ typedef struct {
  *
  * @param intr Pointer to the `Interpreter` to initialize.
  */
-void interpreter_init(Interpreter *intr);
+void interpreter_init(Interpreter* intr);
 
 /**
  * @brief Executes a list of commands using the interpreter.
@@ -38,7 +52,7 @@ void interpreter_init(Interpreter *intr);
  * @param commands Pointer to the first `Command` in the list of commands to
  * interpret.
  */
-void interpret(Interpreter *intr, Command *commands);
+void interpret(Interpreter* intr, Command* commands);
 
 /**
  * @brief Prints the current state of the interpreter.
@@ -48,6 +62,6 @@ void interpret(Interpreter *intr, Command *commands);
  *
  * @param intr Pointer to the `Interpreter` whose state is to be printed.
  */
-void print_interpreter_state(Interpreter *intr);
+void print_interpreter_state(Interpreter* intr);
 
 #endif

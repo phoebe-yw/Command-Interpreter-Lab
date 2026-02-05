@@ -658,6 +658,35 @@ static Command* parse_cmd(Parser* parser) {
             }
             return cmd;
         }
+        case TOK_CALL: {
+            cmd->type = CMD_CALL;
+            advance(parser);  // label
+            if (parser->current.type != TOK_IDENT) {
+                return fail_cmd(parser, cmd);
+            }
+            cmd->val_a.type = OP_STR;
+            char* label = token_to_str(parser->current);
+            if (!label) {
+                return fail_cmd(parser, cmd);
+            }
+            cmd->val_a.as.str = label;
+            advance(parser);  // eof
+            if (parser->current.type != TOK_NL &&
+                parser->current.type != TOK_EOF) {
+                free(cmd->val_a.as.str);
+                return fail_cmd(parser, cmd);
+            }
+            return cmd;
+        }
+        case TOK_RET: {
+            cmd->type = CMD_RET;
+            advance(parser);  // eof
+            if (parser->current.type != TOK_NL &&
+                parser->current.type != TOK_EOF) {
+                return fail_cmd(parser, cmd);
+            }
+            return cmd;
+        }
         default:
             // unrecognized command
             parser->had_error = true;
@@ -700,16 +729,43 @@ Command* parse_commands(Parser* parser) {
             }
             advance(parser);  // move to colon
             advance(parser);  // move past colon
+
+            if (parser->current.type == TOK_EOF) {
+                Command* nop = calloc(1, sizeof(Command));
+                if (!nop) {
+                    parser->had_error = true;
+                    free(pending_label);
+                    break;
+                }
+                nop->type = CMD_NOP;
+                ht_put(parser->labels, pending_label, nop);
+                free(pending_label);
+                pending_label = NULL;
+                
+                // Add NOP to the linked list
+                if (head == NULL) {
+                    head = nop;
+                    tail = nop;
+                } else {
+                    tail->next = nop;
+                    tail = nop;
+                }
+                break;
+            }
             continue;
         }
 
         Command* new_cmd = parse_cmd(parser);
         if (!new_cmd) {
+            if (pending_label != NULL) {
+                free(pending_label);
+                pending_label = NULL;
+            }
             break;
         }
 
         if (pending_label != NULL) {
-            ht_put(parser->labels, pending_label, new_cmd);
+            ht_put(parser->labels, pending_label, new_cmd); 
             free(pending_label);
             pending_label = NULL;
         }
@@ -723,7 +779,7 @@ Command* parse_commands(Parser* parser) {
         }
     }
 
-    if (!parser->had_error && pending_label != NULL) {
+    if (pending_label != NULL) {
         free(pending_label);
         parser->had_error = true;
     }

@@ -5,6 +5,7 @@
 
 #include <inttypes.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "mem.h"
@@ -22,6 +23,7 @@ void interpreter_init(Interpreter* intr) {
     intr->is_greater = false;
     intr->is_less = false;
     intr->is_equal = false;
+    intr->stack = NULL;
 }
 
 // helper to print out base 2 (recursive)
@@ -250,6 +252,8 @@ void interpret(Interpreter* intr, Command* commands) {
                 intr->variables[current->destination.as.var] = (int64_t)value;
                 break;
             }
+            // week 3 end
+            // week 4 start
             case CMD_BRANCH: {
                 bool branches = false;
                 if (current->branch_condition == BRANCH_ALWAYS) {
@@ -282,6 +286,46 @@ void interpret(Interpreter* intr, Command* commands) {
                     continue;
                 }
                 break;
+            }
+            case CMD_CALL: {
+                StackRecord* new_record = malloc(sizeof(StackRecord));
+                if (!new_record) {
+                    intr->had_error = true;
+                    return;
+                }
+                // save current variables to stack record
+                for (int i = 0; i < NUM_VARIABLES; i++) {
+                    new_record->variables[i] = intr->variables[i];
+                }
+                new_record->return_address = current->next;
+                new_record->next = intr->stack;
+                intr->stack = new_record;
+                // jump to label
+                char* label = current->val_a.as.str;
+                Command* target_cmd = (Command*)ht_get(intr->labels, label);
+                if (!target_cmd) {
+                    printf("Label not found: %s\n", label);
+                    free(new_record);
+                    intr->had_error = true;
+                    return;
+                }
+                current = target_cmd;
+                continue;
+            }
+            case CMD_RET: {
+                if (!intr->stack) {
+                    current = NULL;
+                    return;
+                }
+                StackRecord* top = intr->stack;
+                intr->stack = top->next;
+                for (int i = 1; i < NUM_VARIABLES; i++) {
+                    intr->variables[i] = top->variables[i];
+                }
+                Command* return_cmd = top->return_address;
+                free(top);
+                current = return_cmd;
+                continue;
             }
             default:
                 return;
