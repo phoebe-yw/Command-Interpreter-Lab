@@ -1,4 +1,4 @@
-# CI Lab — ASML Interpreter
+# CI Lab - ASML Interpreter
 
 An interpreter for **ASML (A Simple Machine Language)**, written in C as part of CS 429 (Computer Architecture) at UT Austin. The project implements the full pipeline from source text to execution: lexing (provided), parsing, and interpreting.
 
@@ -17,7 +17,7 @@ ASML is a flat, register-based assembly language with:
 |---|---|---|
 | Parser | `src/ci/parser.c` | Recursive-descent parser; converts token stream into a linked list of `Command` structs |
 | Interpreter | `src/ci/interpreter.c` | Walks the command list and executes each instruction; manages registers, flags, memory, and call stack |
-| Command cleanup | `src/ci/command.c` | `free_command()` — walks and frees the full command linked list |
+| Command cleanup | `src/ci/command.c` | `free_command()` - walks and frees the full command linked list |
 | Hash table | `src/hashtable/hashtable.c` | Generic chained hash table (DJB2 hash) used to map label strings to command pointers |
 
 ## Commands Supported
@@ -86,4 +86,3 @@ testcases/         # 198 test cases across weeks 2–4 + hash table
 - **GCC** with `-Wall -Wextra -Werror` and address sanitizers
 - **GDB** for runtime debugging
 - **Valgrind** for memory leak detection
-- **Gradescope** autograder for automated testing
